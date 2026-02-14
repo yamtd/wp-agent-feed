@@ -1,0 +1,84 @@
+# Markdown for Agents — WordPress Plugin
+
+AIエージェントが `Accept: text/markdown` ヘッダー付きでアクセスしてきた際に、
+投稿コンテンツをMarkdownで返すWordPressプラグイン。
+
+## パフォーマンス設計
+
+- **保存時にMarkdownを静的ファイルとして生成**（`wp-content/cache/markdown/`）
+- リクエスト時はファイルを読んで返すだけ（変換処理なし）
+- 外部ライブラリ依存なし（Composerなし）
+
+## セットアップ
+
+```
+wp-content/plugins/markdown-for-agents/markdown-for-agents.php
+```
+
+に配置し、管理画面 > プラグインから「Markdown for Agents」を有効化。
+
+### Nginx の場合
+
+Apache では .htaccess で自動保護されるが、Nginx の場合はキャッシュディレクトリへの
+直接アクセスをブロックする設定を追加する:
+
+```nginx
+location ~* ^/wp-content/cache/markdown/ {
+    deny all;
+    return 403;
+}
+```
+
+## 動作確認
+
+```powershell
+# Windows PowerShell
+curl.exe https://your-site.com/your-post-slug/ -H "Accept: text/markdown"
+
+# Linux / macOS
+curl https://your-site.com/your-post-slug/ -H "Accept: text/markdown"
+```
+
+## レスポンスヘッダー例
+
+```
+Content-Type: text/markdown; charset=utf-8
+Vary: Accept
+X-Markdown-Tokens: 725
+Content-Signal: ai-train=no, search=yes, ai-input=yes
+Cache-Control: public, max-age=3600
+```
+
+## 設定のカスタマイズ
+
+`wp-config.php` で定数を定義すれば、プラグイン本体を編集せずに設定を変更できる:
+
+```php
+// wp-config.php に追記
+define( 'MFA_CACHE_DIR', WP_CONTENT_DIR . '/cache/markdown/' );  // キャッシュ保存先
+define( 'MFA_POST_TYPES', [ 'post', 'page', 'custom_type' ] );   // 対象の投稿タイプ
+define( 'MFA_CONTENT_SIGNAL', 'ai-train=yes, search=yes, ai-input=yes' ); // Content-Signal
+```
+
+| 定数 | 説明 | デフォルト |
+|---|---|---|
+| `MFA_CACHE_DIR` | キャッシュ保存先 | `wp-content/cache/markdown/` |
+| `MFA_POST_TYPES` | 対象の投稿タイプ | `['post', 'page']` |
+| `MFA_CONTENT_SIGNAL` | Content-Signal ヘッダー値 | `ai-train=no, search=yes, ai-input=yes` |
+
+## WP-CLI 対応
+
+既存記事のキャッシュを一括生成:
+
+```bash
+wp markdown-cache regenerate
+```
+
+## 注意事項
+
+- HTML→Markdown変換はWordPressの `the_content` 出力（標準的なブロック要素）に最適化。
+  カスタムショートコードや複雑なネストされたテーブルは完全に変換されない場合がある。
+- `Content-Signal` のデフォルトは `ai-train=no`（トレーニング不許可）。
+  ポリシーに合わせて変更のこと。
+- プラグイン無効化時、`wp-content/cache/markdown/` は自動削除されない。
+  不要であれば手動で削除する。
