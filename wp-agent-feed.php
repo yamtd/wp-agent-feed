@@ -3,7 +3,7 @@
  * Plugin Name: WP Agent Feed
  * Plugin URI: https://github.com/your-repo/wp-agent-feed
  * Description: Accept: text/markdown ヘッダー付きリクエストに対して、投稿コンテンツをMarkdownで返す。保存時に静的キャッシュを生成するパフォーマンス重視設計。
- * Version: 1.1.0
+ * Version: 1.2.0
  * Requires PHP: 7.4
  * License: GPL-2.0-or-later
  * Text Domain: wp-agent-feed
@@ -86,8 +86,8 @@ function waf_on_save_post( $post_id, $post ) {
 	}
 }
 
-add_action( 'trashed_post', 'waf_delete_cache' );
-add_action( 'deleted_post', 'waf_delete_cache' );
+add_action( 'trashed_post', 'waf_maybe_delete_cache' );
+add_action( 'deleted_post', 'waf_maybe_delete_cache' );
 
 /* ========================================
  * 3. Markdown生成（コア処理）
@@ -104,11 +104,24 @@ function waf_generate_cache( $post_id ) {
 
 	if ( ! is_dir( WAF_CACHE_DIR ) ) {
 		wp_mkdir_p( WAF_CACHE_DIR );
-		file_put_contents( WAF_CACHE_DIR . '.htaccess', "Deny from all\n" );
-		file_put_contents( WAF_CACHE_DIR . 'index.html', '' );
+
+		if ( false === file_put_contents( WAF_CACHE_DIR . '.htaccess', "Deny from all\n" ) ) {
+			error_log( 'WP Agent Feed: Failed to write .htaccess to ' . WAF_CACHE_DIR );
+		}
+		if ( false === file_put_contents( WAF_CACHE_DIR . 'index.html', '' ) ) {
+			error_log( 'WP Agent Feed: Failed to write index.html to ' . WAF_CACHE_DIR );
+		}
 	}
 
-	return file_put_contents( waf_cache_path( $post_id ), $markdown ) !== false;
+	$cache_path = waf_cache_path( $post_id );
+	$result     = file_put_contents( $cache_path, $markdown, LOCK_EX );
+
+	if ( false === $result ) {
+		error_log( 'WP Agent Feed: Failed to write cache for post #' . $post_id . ' to ' . $cache_path );
+		return false;
+	}
+
+	return true;
 }
 
 /**
@@ -167,17 +180,33 @@ function waf_build_frontmatter( $post ) {
 function waf_html_to_markdown( $html ) {
 	$md = trim( $html );
 
-	// 見出し h1-h6
+	$md = waf_convert_headings( $md );
+	$md = waf_convert_code_blocks( $md );
+	$md = waf_convert_tables( $md );
+	$md = waf_convert_blockquotes( $md );
+	$md = waf_convert_lists( $md );
+	$md = waf_convert_media( $md );
+	$md = waf_convert_links( $md );
+	$md = waf_convert_inline( $md );
+	$md = waf_cleanup_markdown( $md );
+
+	return trim( $md ) . "\n";
+}
+
+function waf_convert_headings( $md ) {
 	for ( $i = 6; $i >= 1; $i-- ) {
 		$prefix = str_repeat( '#', $i );
-		$md = preg_replace(
+		$md     = preg_replace(
 			'/<h' . $i . '[^>]*>(.*?)<\/h' . $i . '>/si',
 			"\n" . $prefix . ' $1' . "\n",
 			$md
 		);
 	}
+	return $md;
+}
 
-	// pre > code ブロック
+function waf_convert_code_blocks( $md ) {
+	// <pre><code> ブロック（言語クラス対応）
 	$md = preg_replace_callback(
 		'/<pre[^>]*>\s*<code[^>]*?(?:class=["\'](?:language-)?(\w+)["\'][^>]*)?>(.*?)<\/code>\s*<\/pre>/si',
 		function ( $m ) {
@@ -198,15 +227,19 @@ function waf_html_to_markdown( $html ) {
 		$md
 	);
 
-	// テーブル
-	$md = preg_replace_callback(
+	return $md;
+}
+
+function waf_convert_tables( $md ) {
+	return preg_replace_callback(
 		'/<table[^>]*>(.*?)<\/table>/si',
 		'waf_convert_table',
 		$md
 	);
+}
 
-	// blockquote
-	$md = preg_replace_callback(
+function waf_convert_blockquotes( $md ) {
+	return preg_replace_callback(
 		'/<blockquote[^>]*>(.*?)<\/blockquote>/si',
 		function ( $m ) {
 			$inner = waf_html_to_markdown( trim( $m[1] ) );
@@ -215,7 +248,9 @@ function waf_html_to_markdown( $html ) {
 		},
 		$md
 	);
+}
 
+function waf_convert_lists( $md ) {
 	// 順序なしリスト
 	$md = preg_replace_callback(
 		'/<ul[^>]*>(.*?)<\/ul>/si',
@@ -225,55 +260,82 @@ function waf_html_to_markdown( $html ) {
 		$md
 	);
 
-	// 順序付きリスト
+	// 順序付きリスト（start 属性対応）
 	$md = preg_replace_callback(
-		'/<ol[^>]*>(.*?)<\/ol>/si',
+		'/<ol([^>]*)>(.*?)<\/ol>/si',
 		function ( $m ) {
-			$i = 0;
+			$start = 1;
+			if ( preg_match( '/start=["\']?(\d+)["\']?/i', $m[1], $sm ) ) {
+				$start = (int) $sm[1];
+			}
+			$i = $start - 1;
 			return "\n" . preg_replace_callback(
 				'/<li[^>]*>(.*?)<\/li>/si',
 				function ( $lm ) use ( &$i ) {
 					$i++;
 					return $i . '. ' . $lm[1] . "\n";
 				},
-				$m[1]
+				$m[2]
 			) . "\n";
 		},
 		$md
 	);
 
-	// 画像（3パターン）
-	$md = preg_replace(
-		'/<img[^>]*src=["\']([^"\']+)["\'][^>]*alt=["\']([^"\']*)["\'][^>]*\/?>/si',
-		'![$2]($1)',
-		$md
-	);
-	$md = preg_replace(
-		'/<img[^>]*alt=["\']([^"\']*)["\'][^>]*src=["\']([^"\']+)["\'][^>]*\/?>/si',
-		'![$1]($2)',
-		$md
-	);
-	$md = preg_replace(
-		'/<img[^>]*src=["\']([^"\']+)["\'][^>]*\/?>/si',
-		'![]($1)',
+	return $md;
+}
+
+function waf_convert_media( $md ) {
+	// 画像（属性順序に依存しない統合パターン）
+	$md = preg_replace_callback(
+		'/<img[^>]*\/?>/si',
+		function ( $m ) {
+			$tag = $m[0];
+			$src = '';
+			$alt = '';
+			if ( preg_match( '/src=["\']([^"\']+)["\']/', $tag, $sm ) ) {
+				$src = $sm[1];
+			}
+			if ( preg_match( '/alt=["\']([^"\']*)["\']/', $tag, $am ) ) {
+				$alt = $am[1];
+			}
+			return $src ? '![' . $alt . '](' . $src . ')' : '';
+		},
 		$md
 	);
 
-	// リンク
-	$md = preg_replace(
+	// figure / figcaption
+	$md = preg_replace( '/<\/?figure[^>]*>/si', "\n", $md );
+	$md = preg_replace( '/<figcaption[^>]*>(.*?)<\/figcaption>/si', '*$1*', $md );
+
+	return $md;
+}
+
+function waf_convert_links( $md ) {
+	return preg_replace(
 		'/<a[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/si',
 		'[$2]($1)',
 		$md
 	);
+}
 
-	// インライン要素
-	$md = preg_replace( '/<strong[^>]*>(.*?)<\/strong>/si', '**$1**', $md );
-	$md = preg_replace( '/<b[^>]*>(.*?)<\/b>/si', '**$1**', $md );
-	$md = preg_replace( '/<em[^>]*>(.*?)<\/em>/si', '*$1*', $md );
-	$md = preg_replace( '/<i[^>]*>(.*?)<\/i>/si', '*$1*', $md );
-	$md = preg_replace( '/<code[^>]*>(.*?)<\/code>/si', '`$1`', $md );
-	$md = preg_replace( '/<del[^>]*>(.*?)<\/del>/si', '~~$1~~', $md );
+function waf_convert_inline( $md ) {
+	$map = [
+		'strong' => '**',
+		'b'      => '**',
+		'em'     => '*',
+		'i'      => '*',
+		'code'   => '`',
+		'del'    => '~~',
+	];
 
+	foreach ( $map as $tag => $wrap ) {
+		$md = preg_replace( "/<{$tag}[^>]*>(.*?)<\/{$tag}>/si", "{$wrap}\$1{$wrap}", $md );
+	}
+
+	return $md;
+}
+
+function waf_cleanup_markdown( $md ) {
 	// 段落
 	$md = preg_replace( '/<p[^>]*>/si', "\n", $md );
 	$md = str_replace( '</p>', "\n", $md );
@@ -284,10 +346,6 @@ function waf_html_to_markdown( $html ) {
 	// <hr>
 	$md = preg_replace( '/<hr[^>]*\/?>/si', "\n---\n", $md );
 
-	// figure / figcaption
-	$md = preg_replace( '/<\/?figure[^>]*>/si', "\n", $md );
-	$md = preg_replace( '/<figcaption[^>]*>(.*?)<\/figcaption>/si', '*$1*', $md );
-
 	// 残りのHTMLタグを除去
 	$md = strip_tags( $md );
 
@@ -297,7 +355,7 @@ function waf_html_to_markdown( $html ) {
 	// 連続空行を正規化
 	$md = preg_replace( '/\n{3,}/', "\n\n", $md );
 
-	return trim( $md ) . "\n";
+	return $md;
 }
 
 /**
@@ -354,8 +412,15 @@ function waf_delete_cache( $post_id ) {
 	}
 }
 
+function waf_maybe_delete_cache( $post_id ) {
+	$post_type = get_post_type( $post_id );
+	if ( $post_type && in_array( $post_type, WAF_POST_TYPES, true ) ) {
+		waf_delete_cache( $post_id );
+	}
+}
+
 function waf_escape_yaml( $str ) {
-	return str_replace( [ '"', "\n", "\r" ], [ '\\"', ' ', '' ], $str );
+	return str_replace( [ '\\', '"', "\n", "\r" ], [ '\\\\', '\\"', ' ', '' ], $str );
 }
 
 /**
