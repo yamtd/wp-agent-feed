@@ -78,6 +78,8 @@ wp markdown-cache regenerate
 
 - HTML→Markdown変換はWordPressの `the_content` 出力（標準的なブロック要素）に最適化。
   カスタムショートコードや複雑なネストされたテーブルは完全に変換されない場合がある。
+- ネストされたリスト（`<ul>` / `<ol>` の入れ子）やネストされた `<blockquote>` は
+  正しく階層化されない場合がある。単一階層のリスト・引用は正常に変換される。
 - `Content-Signal` のデフォルトは `ai-train=no`（トレーニング不許可）。
   ポリシーに合わせて変更のこと。
 - プラグイン無効化時、`wp-content/cache/markdown/` は自動削除されない。
