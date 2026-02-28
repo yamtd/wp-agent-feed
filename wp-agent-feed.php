@@ -50,7 +50,10 @@ function waf_serve_markdown() {
 		return;
 	}
 
-	$markdown    = file_get_contents( $cache_path );
+	$markdown = file_get_contents( $cache_path );
+	if ( false === $markdown ) {
+		return;
+	}
 	$token_count = waf_estimate_tokens( $markdown );
 
 	status_header( 200 );
@@ -317,7 +320,7 @@ function waf_convert_table( $matches ) {
 		$cells = [];
 		preg_match_all( '/<(?:td|th)[^>]*>(.*?)<\/(?:td|th)>/si', $tr, $cell_matches );
 		foreach ( $cell_matches[1] as $cell ) {
-			$cells[] = trim( strip_tags( $cell ) );
+			$cells[] = str_replace( '|', '\|', trim( strip_tags( $cell ) ) );
 		}
 		$rows[] = $cells;
 	}

@@ -62,6 +62,20 @@ final class FunctionsTest extends TestCase {
 	}
 
 	#[Test]
+	public function table_pipe_in_cell_is_escaped(): void {
+		$html = '<table><tr><th>Name</th><th>Value</th></tr><tr><td>A | B</td><td>C</td></tr></table>';
+		$md   = waf_html_to_markdown( $html );
+		$this->assertStringContainsString( 'A \| B', $md );
+		// Ensure the escaped pipe doesn't break column count.
+		$lines = array_filter( explode( "\n", trim( $md ) ) );
+		foreach ( $lines as $line ) {
+			// Each row should have exactly 3 unescaped pipes (| col1 | col2 |).
+			$unescaped_pipes = preg_match_all( '/(?<!\\\\)\|/', $line );
+			$this->assertSame( 3, $unescaped_pipes, "Row should have 3 unescaped pipes: {$line}" );
+		}
+	}
+
+	#[Test]
 	public function blockquote(): void {
 		$html = '<blockquote><p>quoted text</p></blockquote>';
 		$md   = waf_html_to_markdown( $html );
