@@ -5,3 +5,4 @@
 .phpcs.cache
 .wp-env/
 .wp-env.override.json
+.claude/tmp/

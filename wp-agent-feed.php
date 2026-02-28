@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: WP Agent Feed
- * Plugin URI: https://github.com/your-repo/wp-agent-feed
+ * Plugin URI: https://github.com/yamtd/wp-agent-feed
  * Description: Accept: text/markdown ヘッダー付きリクエストに対して、投稿コンテンツをMarkdownで返す。保存時に静的キャッシュを生成するパフォーマンス重視設計。
  * Version: 1.2.0
  * Requires PHP: 7.4
@@ -354,6 +354,18 @@ function waf_convert_inline( $md ) {
 }
 
 function waf_cleanup_markdown( $md ) {
+	// フェンスドコードブロックをプレースホルダーに退避（全変換から保護）
+	$placeholders = array();
+	$md           = preg_replace_callback(
+		'/^(?<q>(?:>\h?)*)```[^\r\n]*\R(?:.*\R)*?\k<q>```[ \t]*\r?$/m',
+		function ( $m ) use ( &$placeholders ) {
+			$key                  = '__WAF_CODE_BLOCK_' . count( $placeholders ) . '__';
+			$placeholders[ $key ] = $m[0];
+			return $key;
+		},
+		$md
+	);
+
 	// 段落
 	$md = preg_replace( '/<p[^>]*>/si', "\n", $md );
 	$md = str_replace( '</p>', "\n", $md );
@@ -369,6 +381,9 @@ function waf_cleanup_markdown( $md ) {
 
 	// HTMLエンティティをデコード
 	$md = html_entity_decode( $md, ENT_QUOTES, 'UTF-8' );
+
+	// コードブロックを復元
+	$md = str_replace( array_keys( $placeholders ), array_values( $placeholders ), $md );
 
 	// 連続空行を正規化
 	$md = preg_replace( '/\n{3,}/', "\n\n", $md );
