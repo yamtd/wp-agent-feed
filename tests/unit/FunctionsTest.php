@@ -9,6 +9,8 @@ use function WpAgentFeed\html_to_markdown;
 use function WpAgentFeed\escape_yaml;
 use function WpAgentFeed\estimate_tokens;
 use function WpAgentFeed\cache_path;
+use function WpAgentFeed\is_overridden;
+use function WpAgentFeed\clear_all_cache;
 use const WpAgentFeed\CACHE_DIR;
 
 /**
@@ -381,5 +383,105 @@ final class FunctionsTest extends TestCase {
 		$md   = html_to_markdown( $html );
 		$this->assertStringContainsString( '<div>test</div>', $md );
 		$this->assertStringContainsString( '<p>line2</p>', $md );
+	}
+
+	/* ========================================
+	 * is_overridden() テスト
+	 * ======================================== */
+
+	#[Test]
+	public function is_overridden_returns_false_for_unknown_name(): void {
+		is_overridden( '', false, true ); // reset
+		$this->assertFalse( is_overridden( 'UNKNOWN_SETTING' ) );
+	}
+
+	#[Test]
+	public function is_overridden_returns_true_after_mark(): void {
+		is_overridden( '', false, true ); // reset
+		is_overridden( 'TEST_SETTING', true );
+		$this->assertTrue( is_overridden( 'TEST_SETTING' ) );
+	}
+
+	#[Test]
+	public function is_overridden_names_are_independent(): void {
+		is_overridden( '', false, true ); // reset
+		is_overridden( 'SETTING_A', true );
+		$this->assertTrue( is_overridden( 'SETTING_A' ) );
+		$this->assertFalse( is_overridden( 'SETTING_B' ) );
+	}
+
+	#[Test]
+	public function is_overridden_reset_clears_all(): void {
+		is_overridden( 'SETTING_X', true );
+		is_overridden( '', false, true ); // reset
+		$this->assertFalse( is_overridden( 'SETTING_X' ) );
+	}
+
+	/* ========================================
+	 * clear_all_cache() テスト
+	 * ======================================== */
+
+	#[Test]
+	public function clear_all_cache_returns_zero_for_empty_dir(): void {
+		$dir = CACHE_DIR;
+		if ( ! is_dir( $dir ) ) {
+			mkdir( $dir, 0755, true );
+		}
+		// Ensure directory is empty of .md files.
+		foreach ( glob( $dir . '*.md' ) ?: array() as $f ) {
+			unlink( $f );
+		}
+		$this->assertSame( 0, clear_all_cache() );
+	}
+
+	#[Test]
+	public function clear_all_cache_deletes_only_md_files(): void {
+		$dir = CACHE_DIR;
+		if ( ! is_dir( $dir ) ) {
+			mkdir( $dir, 0755, true );
+		}
+		// Create test files.
+		file_put_contents( $dir . '1.md', 'test' );
+		file_put_contents( $dir . '2.md', 'test' );
+		file_put_contents( $dir . 'keep.txt', 'keep' );
+
+		$count = clear_all_cache();
+
+		$this->assertSame( 2, $count );
+		$this->assertFileDoesNotExist( $dir . '1.md' );
+		$this->assertFileDoesNotExist( $dir . '2.md' );
+		$this->assertFileExists( $dir . 'keep.txt' );
+
+		// Cleanup.
+		unlink( $dir . 'keep.txt' );
+	}
+
+	#[Test]
+	public function clear_all_cache_returns_zero_for_nonexistent_dir(): void {
+		// Use a non-existent sub-directory path.
+		// The function uses the CACHE_DIR constant which is already defined.
+		// We test via a temp dir that doesn't exist.
+		$original_dir = CACHE_DIR;
+		// Since CACHE_DIR is a constant, we can only test with the existing value.
+		// If the directory doesn't exist, ensure it returns 0.
+		$test_dir = sys_get_temp_dir() . '/waf-test-nonexistent-' . uniqid() . '/';
+		// clear_all_cache uses CACHE_DIR constant, so we can't change it.
+		// Instead, test that empty dir returns 0 (covered above).
+		// This test verifies the function handles missing directories gracefully
+		// by temporarily removing the cache directory.
+		if ( is_dir( $original_dir ) ) {
+			// Remove all files first.
+			foreach ( glob( $original_dir . '*' ) ?: array() as $f ) {
+				if ( is_file( $f ) ) {
+					unlink( $f );
+				}
+			}
+			rmdir( $original_dir );
+		}
+
+		$this->assertSame( 0, clear_all_cache() );
+
+		// Restore directory for other tests.
+		mkdir( $original_dir, 0755, true );
 	}
 }

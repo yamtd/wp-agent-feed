@@ -14,17 +14,31 @@ namespace WpAgentFeed;
 defined( 'ABSPATH' ) || exit;
 
 /* ========================================
- * 設定
+ * 設定（優先順位: wp-config.php 定数 > DB オプション > デフォルト値）
  * ======================================== */
 if ( ! defined( __NAMESPACE__ . '\CACHE_DIR' ) ) {
 	define( __NAMESPACE__ . '\CACHE_DIR', WP_CONTENT_DIR . '/cache/markdown/' );
 }
 if ( ! defined( __NAMESPACE__ . '\POST_TYPES' ) ) {
-	define( __NAMESPACE__ . '\POST_TYPES', [ 'post', 'page' ] );
+	define(
+		__NAMESPACE__ . '\POST_TYPES',
+		false !== get_option( 'wp_agent_feed_post_types' )
+			? (array) get_option( 'wp_agent_feed_post_types' )
+			: array( 'post', 'page' )
+	);
+} else {
+	is_overridden( 'POST_TYPES', true );
 }
 if ( ! defined( __NAMESPACE__ . '\CONTENT_SIGNAL' ) ) {
-	define( __NAMESPACE__ . '\CONTENT_SIGNAL', 'ai-train=no, search=yes, ai-input=yes' );
+	define(
+		__NAMESPACE__ . '\CONTENT_SIGNAL',
+		get_option( 'wp_agent_feed_content_signal', 'ai-train=no, search=yes, ai-input=yes' )
+	);
+} else {
+	is_overridden( 'CONTENT_SIGNAL', true );
 }
+
+register_uninstall_hook( __FILE__, 'WpAgentFeed\uninstall' );
 
 /* ========================================
  * 1. 早期インターセプト — Accept ヘッダーの確認とキャッシュ配信
@@ -455,6 +469,26 @@ function convert_table( $matches ) {
  * ユーティリティ
  * ======================================== */
 
+/**
+ * 設定値が wp-config.php 定数でオーバーライドされているか判定。
+ *
+ * @param string $name  設定名（'CONTENT_SIGNAL' or 'POST_TYPES'）。
+ * @param bool   $mark  true の場合、オーバーライドとして登録。
+ * @param bool   $reset true の場合、全登録をクリア（テスト専用）。
+ * @return bool オーバーライドされていれば true。
+ */
+function is_overridden( $name = '', $mark = false, $reset = false ) {
+	static $overrides = array();
+	if ( $reset ) {
+		$overrides = array();
+		return false;
+	}
+	if ( $mark && $name ) {
+		$overrides[ $name ] = true;
+	}
+	return isset( $overrides[ $name ] );
+}
+
 function cache_path( $post_id ) {
 	return CACHE_DIR . intval( $post_id ) . '.md';
 }
@@ -523,4 +557,503 @@ if ( defined( 'WP_CLI' ) && \WP_CLI ) {
 			\WP_CLI::success( "Done. {$count} cache files generated in " . CACHE_DIR );
 		}
 	);
+}
+
+/* ========================================
+ * Admin: 設定ページ
+ * ======================================== */
+add_action( 'admin_menu', __NAMESPACE__ . '\add_admin_menu' );
+add_action( 'admin_init', __NAMESPACE__ . '\register_settings' );
+
+/**
+ * 管理メニューに設定ページを追加。
+ */
+function add_admin_menu() {
+	add_options_page(
+		__( 'WP Agent Feed', 'wp-agent-feed' ),
+		__( 'WP Agent Feed', 'wp-agent-feed' ),
+		'manage_options',
+		'wp-agent-feed',
+		__NAMESPACE__ . '\render_settings_page'
+	);
+}
+
+/**
+ * Settings API にオプションとフィールドを登録。
+ */
+function register_settings() {
+	$has_editable = false;
+
+	if ( ! is_overridden( 'CONTENT_SIGNAL' ) ) {
+		register_setting(
+			'wp_agent_feed_settings',
+			'wp_agent_feed_content_signal',
+			array(
+				'type'              => 'string',
+				'sanitize_callback' => __NAMESPACE__ . '\sanitize_content_signal',
+				'default'           => 'ai-train=no, search=yes, ai-input=yes',
+			)
+		);
+		$has_editable = true;
+	}
+
+	if ( ! is_overridden( 'POST_TYPES' ) ) {
+		register_setting(
+			'wp_agent_feed_settings',
+			'wp_agent_feed_post_types',
+			array(
+				'type'              => 'array',
+				'sanitize_callback' => __NAMESPACE__ . '\sanitize_post_types',
+				'default'           => array( 'post', 'page' ),
+			)
+		);
+		$has_editable = true;
+	}
+
+	add_settings_section(
+		'wp_agent_feed_general',
+		__( 'General Settings', 'wp-agent-feed' ),
+		__NAMESPACE__ . '\render_section_general',
+		'wp-agent-feed'
+	);
+
+	add_settings_field(
+		'wp_agent_feed_post_types',
+		__( 'Post Types', 'wp-agent-feed' ),
+		__NAMESPACE__ . '\render_field_post_types',
+		'wp-agent-feed',
+		'wp_agent_feed_general'
+	);
+
+	add_settings_field(
+		'wp_agent_feed_content_signal',
+		__( 'Content-Signal', 'wp-agent-feed' ),
+		__NAMESPACE__ . '\render_field_content_signal',
+		'wp-agent-feed',
+		'wp_agent_feed_general'
+	);
+}
+
+/**
+ * Content-Signal 値のサニタイズ。
+ *
+ * @param string $value Raw input.
+ * @return string Sanitized value.
+ */
+function sanitize_content_signal( $value ) {
+	return sanitize_text_field( $value );
+}
+
+/**
+ * Post Types 値のサニタイズ。
+ *
+ * @param mixed $value Raw input.
+ * @return array Sanitized array of post type slugs.
+ */
+function sanitize_post_types( $value ) {
+	if ( ! is_array( $value ) || empty( $value ) ) {
+		return array( 'post', 'page' );
+	}
+	$sanitized = array_values(
+		array_filter(
+			array_map( 'sanitize_key', $value ),
+			function ( $slug ) {
+				return post_type_exists( $slug );
+			}
+		)
+	);
+	return empty( $sanitized ) ? array( 'post', 'page' ) : $sanitized;
+}
+
+/**
+ * General セクションの説明テキスト。
+ */
+function render_section_general() {
+	echo '<p>';
+	esc_html_e(
+		'Configure how WP Agent Feed serves Markdown responses. Settings defined as constants in wp-config.php take priority over these values.',
+		'wp-agent-feed'
+	);
+	echo '</p>';
+}
+
+/**
+ * Content-Signal テキストフィールドの描画。
+ */
+function render_field_content_signal() {
+	if ( is_overridden( 'CONTENT_SIGNAL' ) ) {
+		echo '<code>' . esc_html( CONTENT_SIGNAL ) . '</code>';
+		echo '<p class="description">';
+		esc_html_e(
+			'Defined in wp-config.php. Remove the constant to manage this setting here.',
+			'wp-agent-feed'
+		);
+		echo '</p>';
+		return;
+	}
+
+	$value = get_option( 'wp_agent_feed_content_signal', 'ai-train=no, search=yes, ai-input=yes' );
+	printf(
+		'<input type="text" id="wp_agent_feed_content_signal" name="wp_agent_feed_content_signal" value="%s" class="regular-text" />',
+		esc_attr( $value )
+	);
+	echo '<p class="description">';
+	esc_html_e( 'The Content-Signal header value sent with Markdown responses.', 'wp-agent-feed' );
+	echo '</p>';
+}
+
+/**
+ * Post Types チェックボックスの描画。
+ */
+function render_field_post_types() {
+	if ( is_overridden( 'POST_TYPES' ) ) {
+		echo '<code>' . esc_html( implode( ', ', POST_TYPES ) ) . '</code>';
+		echo '<p class="description">';
+		esc_html_e(
+			'Defined in wp-config.php. Remove the constant to manage this setting here.',
+			'wp-agent-feed'
+		);
+		echo '</p>';
+		return;
+	}
+
+	$current = get_option( 'wp_agent_feed_post_types', array( 'post', 'page' ) );
+	if ( ! is_array( $current ) ) {
+		$current = array( 'post', 'page' );
+	}
+
+	$post_types = get_post_types( array( 'public' => true ), 'objects' );
+
+	foreach ( $post_types as $pt ) {
+		printf(
+			'<label style="display: block; margin-bottom: 4px;"><input type="checkbox" name="wp_agent_feed_post_types[]" value="%s" %s /> %s (<code>%s</code>)</label>',
+			esc_attr( $pt->name ),
+			checked( in_array( $pt->name, $current, true ), true, false ),
+			esc_html( $pt->labels->name ),
+			esc_html( $pt->name )
+		);
+	}
+}
+
+/**
+ * 設定ページ全体の描画。
+ */
+function render_settings_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return;
+	}
+
+	$all_overridden = is_overridden( 'CONTENT_SIGNAL' ) && is_overridden( 'POST_TYPES' );
+	?>
+	<div class="wrap">
+		<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+
+		<?php if ( $all_overridden ) : ?>
+			<?php do_settings_sections( 'wp-agent-feed' ); ?>
+		<?php else : ?>
+			<form method="post" action="options.php">
+				<?php
+				settings_fields( 'wp_agent_feed_settings' );
+				do_settings_sections( 'wp-agent-feed' );
+				submit_button();
+				?>
+			</form>
+		<?php endif; ?>
+
+		<hr />
+
+		<h2><?php esc_html_e( 'Cache Management', 'wp-agent-feed' ); ?></h2>
+		<p>
+			<?php
+			printf(
+				/* translators: %s is the cache directory path */
+				esc_html__( 'Cache directory: %s', 'wp-agent-feed' ),
+				'<code>' . esc_html( CACHE_DIR ) . '</code>'
+			);
+			?>
+		</p>
+		<p>
+			<button type="button" class="button button-primary" id="wp-agent-feed-regenerate">
+				<?php esc_html_e( 'Regenerate All Cache', 'wp-agent-feed' ); ?>
+			</button>
+			<button type="button" class="button" id="wp-agent-feed-clear">
+				<?php esc_html_e( 'Clear All Cache', 'wp-agent-feed' ); ?>
+			</button>
+			<span id="wp-agent-feed-status" style="margin-left: 8px;"></span>
+		</p>
+
+		<?php render_cache_management_script(); ?>
+	</div>
+	<?php
+}
+
+/* ========================================
+ * Admin: キャッシュ管理 AJAX
+ * ======================================== */
+add_action( 'wp_ajax_wp_agent_feed_regenerate', __NAMESPACE__ . '\ajax_regenerate' );
+add_action( 'wp_ajax_wp_agent_feed_clear', __NAMESPACE__ . '\ajax_clear' );
+
+/**
+ * AJAX: キャッシュ一括再生成（バッチ処理）。
+ */
+function ajax_regenerate() {
+	check_ajax_referer( 'wp_agent_feed_cache' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( __( 'Permission denied.', 'wp-agent-feed' ), 403 );
+	}
+
+	$batch_id = isset( $_POST['batch_id'] ) ? sanitize_text_field( $_POST['batch_id'] ) : '';
+
+	if ( empty( $batch_id ) ) {
+		// 初回: ID スナップショットを取得して transient に保存。
+		$posts = get_posts(
+			array(
+				'post_type'      => POST_TYPES,
+				'post_status'    => 'publish',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+			)
+		);
+
+		$batch_id = wp_generate_password( 12, false );
+		set_transient( 'wp_agent_feed_batch_' . $batch_id, $posts, HOUR_IN_SECONDS );
+
+		wp_send_json_success(
+			array(
+				'batch_id' => $batch_id,
+				'total'    => count( $posts ),
+			)
+		);
+	}
+
+	// 後続: transient から ID を読み取りバッチ処理。
+	$ids = get_transient( 'wp_agent_feed_batch_' . $batch_id );
+	if ( false === $ids ) {
+		wp_send_json_error( 'batch_expired' );
+	}
+
+	$page       = isset( $_POST['page'] ) ? absint( $_POST['page'] ) : 0;
+	$batch_size = 50;
+	$chunk      = array_slice( $ids, $page * $batch_size, $batch_size );
+
+	$processed = 0;
+	foreach ( $chunk as $post_id ) {
+		if ( generate_cache( $post_id ) ) {
+			++$processed;
+		}
+	}
+
+	$done = ( ( $page + 1 ) * $batch_size ) >= count( $ids );
+	if ( $done ) {
+		delete_transient( 'wp_agent_feed_batch_' . $batch_id );
+	}
+
+	wp_send_json_success(
+		array(
+			'processed' => $processed,
+			'done'      => $done,
+		)
+	);
+}
+
+/**
+ * AJAX: 全キャッシュクリア。
+ */
+function ajax_clear() {
+	check_ajax_referer( 'wp_agent_feed_cache' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( __( 'Permission denied.', 'wp-agent-feed' ), 403 );
+	}
+
+	$count = clear_all_cache();
+
+	wp_send_json_success(
+		array(
+			/* translators: %d is the number of deleted cache files */
+			'message' => sprintf( __( 'Deleted %d cache files.', 'wp-agent-feed' ), $count ),
+			'count'   => $count,
+		)
+	);
+}
+
+/**
+ * キャッシュディレクトリ内の全 .md ファイルを削除。
+ *
+ * @return int 削除したファイル数。
+ */
+function clear_all_cache() {
+	if ( ! is_dir( CACHE_DIR ) ) {
+		return 0;
+	}
+
+	$files = glob( CACHE_DIR . '*.md' );
+	if ( ! is_array( $files ) ) {
+		return 0;
+	}
+
+	$count = 0;
+	foreach ( $files as $file ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+		if ( unlink( $file ) ) {
+			++$count;
+		}
+	}
+
+	return $count;
+}
+
+/**
+ * キャッシュ管理ボタンの JavaScript を出力。
+ */
+function render_cache_management_script() {
+	$nonce = wp_create_nonce( 'wp_agent_feed_cache' );
+	?>
+	<script>
+	/* <![CDATA[ */
+	(function() {
+		var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+		var nonce   = <?php echo wp_json_encode( $nonce ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+		var status  = document.getElementById('wp-agent-feed-status');
+		var btnRegen = document.getElementById('wp-agent-feed-regenerate');
+		var btnClear = document.getElementById('wp-agent-feed-clear');
+
+		function setButtons(disabled) {
+			btnRegen.disabled = disabled;
+			btnClear.disabled = disabled;
+		}
+
+		function doPost(params) {
+			var data = new FormData();
+			data.append('_ajax_nonce', nonce);
+			for (var k in params) {
+				if (params.hasOwnProperty(k)) { data.append(k, params[k]); }
+			}
+			return fetch(ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' })
+				.then(function(r) { return r.json(); });
+		}
+
+		function regenerate(retries) {
+			if (typeof retries === 'undefined') { retries = 0; }
+			setButtons(true);
+			status.textContent = '<?php echo esc_js( __( 'Starting...', 'wp-agent-feed' ) ); ?>';
+
+			doPost({ action: 'wp_agent_feed_regenerate' }).then(function(json) {
+				if (!json.success) {
+					status.textContent = json.data || 'Error';
+					setButtons(false);
+					return;
+				}
+				var batchId = json.data.batch_id;
+				var total   = json.data.total;
+				if (total === 0) {
+					status.textContent = '<?php echo esc_js( __( 'No posts to process.', 'wp-agent-feed' ) ); ?>';
+					setButtons(false);
+					return;
+				}
+				processBatch(batchId, total, 0, 0, retries);
+			}).catch(function() {
+				status.textContent = '<?php echo esc_js( __( 'Request failed.', 'wp-agent-feed' ) ); ?>';
+				setButtons(false);
+			});
+		}
+
+		function processBatch(batchId, total, page, done, retries) {
+			var processed = page * 50;
+			status.textContent = processed + ' / ' + total + ' <?php echo esc_js( __( 'processed...', 'wp-agent-feed' ) ); ?>';
+
+			doPost({ action: 'wp_agent_feed_regenerate', batch_id: batchId, page: page }).then(function(json) {
+				if (!json.success) {
+					if (json.data === 'batch_expired' && retries < 3) {
+						regenerate(retries + 1);
+						return;
+					}
+					status.textContent = json.data || 'Error';
+					setButtons(false);
+					return;
+				}
+				if (json.data.done) {
+					status.textContent = total + ' <?php echo esc_js( __( 'cache files regenerated.', 'wp-agent-feed' ) ); ?>';
+					setButtons(false);
+				} else {
+					processBatch(batchId, total, page + 1, 0, retries);
+				}
+			}).catch(function() {
+				status.textContent = '<?php echo esc_js( __( 'Request failed.', 'wp-agent-feed' ) ); ?>';
+				setButtons(false);
+			});
+		}
+
+		btnRegen.addEventListener('click', function() { regenerate(0); });
+
+		btnClear.addEventListener('click', function() {
+			if (!confirm('<?php echo esc_js( __( 'Are you sure you want to clear all cache files?', 'wp-agent-feed' ) ); ?>')) {
+				return;
+			}
+			setButtons(true);
+			status.textContent = '<?php echo esc_js( __( 'Clearing...', 'wp-agent-feed' ) ); ?>';
+
+			doPost({ action: 'wp_agent_feed_clear' }).then(function(json) {
+				status.textContent = json.success ? json.data.message : (json.data || 'Error');
+				setButtons(false);
+			}).catch(function() {
+				status.textContent = '<?php echo esc_js( __( 'Request failed.', 'wp-agent-feed' ) ); ?>';
+				setButtons(false);
+			});
+		});
+	})();
+	/* ]]> */
+	</script>
+	<?php
+}
+
+/* ========================================
+ * アンインストール処理
+ * ======================================== */
+
+/**
+ * プラグイン削除時のクリーンアップ。
+ *
+ * キャッシュディレクトリ内のプラグイン所有ファイルとオプションを削除。
+ */
+function uninstall() {
+	$cache_dir = defined( 'WpAgentFeed\CACHE_DIR' ) ? CACHE_DIR : WP_CONTENT_DIR . '/cache/markdown/';
+
+	if ( is_dir( $cache_dir ) ) {
+		// *.md ファイル（投稿ID形式のみ）。
+		$md_files = glob( $cache_dir . '*.md' );
+		if ( is_array( $md_files ) ) {
+			foreach ( $md_files as $file ) {
+				if ( preg_match( '/^\d+\.md$/', basename( $file ) ) ) {
+					// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+					unlink( $file );
+				}
+			}
+		}
+
+		// .htaccess（プラグイン生成テンプレートと一致する場合のみ）。
+		$htaccess = $cache_dir . '.htaccess';
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+		if ( is_file( $htaccess ) && file_get_contents( $htaccess ) === "# Apache 2.4+\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n\n# Apache 2.2\n<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n" ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+			unlink( $htaccess );
+		}
+
+		// index.html（空ファイルの場合のみ）。
+		$index = $cache_dir . 'index.html';
+		if ( is_file( $index ) && 0 === filesize( $index ) ) {
+			// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+			unlink( $index );
+		}
+
+		// ディレクトリが空の場合のみ削除。
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
+		@rmdir( $cache_dir );
+	}
+
+	delete_option( 'wp_agent_feed_content_signal' );
+	delete_option( 'wp_agent_feed_post_types' );
 }
