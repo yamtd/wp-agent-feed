@@ -55,16 +55,16 @@ Cache-Control: public, max-age=3600
 
 ```php
 // wp-config.php に追記
-define( 'WAF_CACHE_DIR', WP_CONTENT_DIR . '/cache/markdown/' );  // キャッシュ保存先
-define( 'WAF_POST_TYPES', [ 'post', 'page', 'custom_type' ] );   // 対象の投稿タイプ
-define( 'WAF_CONTENT_SIGNAL', 'ai-train=yes, search=yes, ai-input=yes' ); // Content-Signal
+define( 'WpAgentFeed\CACHE_DIR', WP_CONTENT_DIR . '/cache/markdown/' );  // キャッシュ保存先
+define( 'WpAgentFeed\POST_TYPES', [ 'post', 'page', 'custom_type' ] );   // 対象の投稿タイプ
+define( 'WpAgentFeed\CONTENT_SIGNAL', 'ai-train=yes, search=yes, ai-input=yes' ); // Content-Signal
 ```
 
 | 定数 | 説明 | デフォルト |
 |---|---|---|
-| `WAF_CACHE_DIR` | キャッシュ保存先 | `wp-content/cache/markdown/` |
-| `WAF_POST_TYPES` | 対象の投稿タイプ | `['post', 'page']` |
-| `WAF_CONTENT_SIGNAL` | Content-Signal ヘッダー値 | `ai-train=no, search=yes, ai-input=yes` |
+| `WpAgentFeed\CACHE_DIR` | キャッシュ保存先 | `wp-content/cache/markdown/` |
+| `WpAgentFeed\POST_TYPES` | 対象の投稿タイプ | `['post', 'page']` |
+| `WpAgentFeed\CONTENT_SIGNAL` | Content-Signal ヘッダー値 | `ai-train=no, search=yes, ai-input=yes` |
 
 ## WP-CLI 対応
 
