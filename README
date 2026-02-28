@@ -82,3 +82,32 @@ wp markdown-cache regenerate
   ポリシーに合わせて変更のこと。
 - プラグイン無効化時、`wp-content/cache/markdown/` は自動削除されない。
   不要であれば手動で削除する。
+
+## Development
+
+### 必要な環境
+
+- PHP 8.2 以上（開発ツール用。プラグイン自体は PHP 7.4 以上で動作）
+- Composer
+
+### インストールと確認
+
+```bash
+composer install        # 依存インストール
+composer check          # lint + test を一括実行
+```
+
+### 個別コマンド
+
+```bash
+composer lint           # PHPCS のみ
+composer lint:fix       # PHPCBF で自動修正
+composer test           # PHPUnit のみ
+```
+
+### ローカル WordPress 環境（任意・Docker 必要）
+
+```bash
+npx @wordpress/env start    # WordPress + プラグイン有効化済み環境を起動
+npx @wordpress/env stop     # 環境停止
+```

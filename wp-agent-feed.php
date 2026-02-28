@@ -115,7 +115,7 @@ function waf_generate_cache( $post_id ) {
  * the_content フィルターを安全に適用。
  */
 function waf_get_rendered_content( $post ) {
-	$prev_post = $GLOBALS['post'] ?? null;
+	$prev_post       = $GLOBALS['post'] ?? null;
 	$GLOBALS['post'] = $post;
 	setup_postdata( $post );
 
@@ -170,7 +170,7 @@ function waf_html_to_markdown( $html ) {
 	// 見出し h1-h6
 	for ( $i = 6; $i >= 1; $i-- ) {
 		$prefix = str_repeat( '#', $i );
-		$md = preg_replace(
+		$md     = preg_replace(
 			'/<h' . $i . '[^>]*>(.*?)<\/h' . $i . '>/si',
 			"\n" . $prefix . ' $1' . "\n",
 			$md
@@ -332,7 +332,7 @@ function waf_convert_table( $matches ) {
 	$output   .= '| ' . implode( ' | ', array_fill( 0, $col_count, '---' ) ) . " |\n";
 
 	for ( $i = 1, $len = count( $rows ); $i < $len; $i++ ) {
-		$row = array_pad( $rows[ $i ], $col_count, '' );
+		$row     = array_pad( $rows[ $i ], $col_count, '' );
 		$output .= '| ' . implode( ' | ', $row ) . " |\n";
 	}
 
@@ -377,26 +377,31 @@ function waf_estimate_tokens( $text ) {
  * 使い方: wp markdown-cache regenerate
  * ======================================== */
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	WP_CLI::add_command( 'markdown-cache', function ( $args, $assoc_args ) {
-		if ( empty( $args[0] ) || $args[0] !== 'regenerate' ) {
-			WP_CLI::error( 'Usage: wp markdown-cache regenerate' );
+	WP_CLI::add_command(
+		'markdown-cache',
+		function ( $args, $assoc_args ) {
+			if ( empty( $args[0] ) || $args[0] !== 'regenerate' ) {
+				WP_CLI::error( 'Usage: wp markdown-cache regenerate' );
+			}
+
+			$posts = get_posts(
+				[
+					'post_type'      => WAF_POST_TYPES,
+					'post_status'    => 'publish',
+					'posts_per_page' => -1,
+					'fields'         => 'ids',
+				]
+			);
+
+			$count = count( $posts );
+			WP_CLI::log( "Regenerating markdown cache for {$count} posts..." );
+
+			foreach ( $posts as $i => $post_id ) {
+				waf_generate_cache( $post_id );
+				WP_CLI::log( sprintf( '  [%d/%d] Post #%d', $i + 1, $count, $post_id ) );
+			}
+
+			WP_CLI::success( "Done. {$count} cache files generated in " . WAF_CACHE_DIR );
 		}
-
-		$posts = get_posts( [
-			'post_type'      => WAF_POST_TYPES,
-			'post_status'    => 'publish',
-			'posts_per_page' => -1,
-			'fields'         => 'ids',
-		] );
-
-		$count = count( $posts );
-		WP_CLI::log( "Regenerating markdown cache for {$count} posts..." );
-
-		foreach ( $posts as $i => $post_id ) {
-			waf_generate_cache( $post_id );
-			WP_CLI::log( sprintf( '  [%d/%d] Post #%d', $i + 1, $count, $post_id ) );
-		}
-
-		WP_CLI::success( "Done. {$count} cache files generated in " . WAF_CACHE_DIR );
-	} );
+	);
 }
