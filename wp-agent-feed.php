@@ -103,23 +103,13 @@ function generate_cache( $post_id ) {
 		return false;
 	}
 
+	if ( ! initialize_cache_dir() ) {
+		return false;
+	}
+
 	$frontmatter = build_frontmatter( $post );
 	$html        = get_rendered_content( $post );
 	$markdown    = $frontmatter . html_to_markdown( $html );
-
-	if ( ! is_dir( CACHE_DIR ) ) {
-		wp_mkdir_p( CACHE_DIR );
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		if ( false === file_put_contents( CACHE_DIR . '.htaccess', "# Apache 2.4+\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n\n# Apache 2.2\n<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n" ) ) {
-			// translators: %s is the cache directory path.
-			error_log( sprintf( 'WP Agent Feed: Failed to create .htaccess in %s', CACHE_DIR ) );
-		}
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		if ( false === file_put_contents( CACHE_DIR . 'index.html', '' ) ) {
-			// translators: %s is the cache directory path.
-			error_log( sprintf( 'WP Agent Feed: Failed to create index.html in %s', CACHE_DIR ) );
-		}
-	}
 
 	$dest = cache_path( $post_id );
 	$tmp  = $dest . '.tmp';
@@ -139,6 +129,38 @@ function generate_cache( $post_id ) {
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
 		unlink( $tmp );
 		return false;
+	}
+
+	return true;
+}
+
+/**
+ * キャッシュディレクトリの初期化（セキュリティ保護ファイル付き）。
+ *
+ * @return bool ディレクトリが利用可能なら true。
+ */
+function initialize_cache_dir() {
+	if ( is_dir( CACHE_DIR ) ) {
+		return true;
+	}
+
+	wp_mkdir_p( CACHE_DIR );
+
+	if ( ! is_dir( CACHE_DIR ) ) {
+		// translators: %s is the cache directory path.
+		error_log( sprintf( 'WP Agent Feed: Failed to create cache directory %s', CACHE_DIR ) );
+		return false;
+	}
+
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+	if ( false === file_put_contents( CACHE_DIR . '.htaccess', "# Apache 2.4+\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n\n# Apache 2.2\n<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n" ) ) {
+		// translators: %s is the cache directory path.
+		error_log( sprintf( 'WP Agent Feed: Failed to create .htaccess in %s', CACHE_DIR ) );
+	}
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+	if ( false === file_put_contents( CACHE_DIR . 'index.html', '' ) ) {
+		// translators: %s is the cache directory path.
+		error_log( sprintf( 'WP Agent Feed: Failed to create index.html in %s', CACHE_DIR ) );
 	}
 
 	return true;
@@ -198,10 +220,11 @@ function build_frontmatter( $post ) {
  * 5. HTML → Markdown 変換（軽量・依存なし）
  * ======================================== */
 function html_to_markdown( $html ) {
-	$md = trim( $html );
+	$md           = trim( $html );
+	$placeholders = array();
 
+	$md = convert_code_blocks( $md, $placeholders );
 	$md = convert_headings( $md );
-	$md = convert_code_blocks( $md );
 	$md = convert_tables( $md );
 	$md = convert_blockquotes( $md );
 	$md = convert_lists( $md );
@@ -209,6 +232,11 @@ function html_to_markdown( $html ) {
 	$md = convert_links( $md );
 	$md = convert_inline( $md );
 	$md = cleanup_markdown( $md );
+
+	// コードブロックを復元
+	if ( $placeholders ) {
+		$md = str_replace( array_keys( $placeholders ), array_values( $placeholders ), $md );
+	}
 
 	return trim( $md ) . "\n";
 }
@@ -225,24 +253,30 @@ function convert_headings( $md ) {
 	return $md;
 }
 
-function convert_code_blocks( $md ) {
-	// <pre><code> ブロック（言語クラス対応）
+function convert_code_blocks( $md, &$placeholders ) {
+	// <pre><code> ブロック（言語クラス対応）→ プレースホルダーに退避
 	$md = preg_replace_callback(
 		'/<pre[^>]*>\s*<code[^>]*?(?:class=["\'](?:language-)?(\w+)["\'][^>]*)?>(.*?)<\/code>\s*<\/pre>/si',
-		function ( $m ) {
-			$lang = $m[1] ?? '';
-			$code = html_entity_decode( $m[2], ENT_QUOTES, 'UTF-8' );
-			return "\n```" . $lang . "\n" . $code . "\n```\n";
+		function ( $m ) use ( &$placeholders ) {
+			$lang                 = $m[1] ?? '';
+			$code                 = html_entity_decode( $m[2], ENT_QUOTES, 'UTF-8' );
+			$fenced               = "\n```" . $lang . "\n" . $code . "\n```\n";
+			$key                  = '__CODE_BLOCK_' . count( $placeholders ) . '__';
+			$placeholders[ $key ] = $fenced;
+			return $key;
 		},
 		$md
 	);
 
-	// <pre> 単体
+	// <pre> 単体 → プレースホルダーに退避
 	$md = preg_replace_callback(
 		'/<pre[^>]*>(.*?)<\/pre>/si',
-		function ( $m ) {
-			$code = html_entity_decode( $m[1], ENT_QUOTES, 'UTF-8' );
-			return "\n```\n" . $code . "\n```\n";
+		function ( $m ) use ( &$placeholders ) {
+			$code                 = html_entity_decode( $m[1], ENT_QUOTES, 'UTF-8' );
+			$fenced               = "\n```\n" . $code . "\n```\n";
+			$key                  = '__CODE_BLOCK_' . count( $placeholders ) . '__';
+			$placeholders[ $key ] = $fenced;
+			return $key;
 		},
 		$md
 	);
@@ -356,18 +390,6 @@ function convert_inline( $md ) {
 }
 
 function cleanup_markdown( $md ) {
-	// フェンスドコードブロックをプレースホルダーに退避（全変換から保護）
-	$placeholders = array();
-	$md           = preg_replace_callback(
-		'/^(?<q>(?:>\h?)*)```[^\r\n]*\R(?:.*\R)*?\k<q>```[ \t]*\r?$/m',
-		function ( $m ) use ( &$placeholders ) {
-			$key                  = '__CODE_BLOCK_' . count( $placeholders ) . '__';
-			$placeholders[ $key ] = $m[0];
-			return $key;
-		},
-		$md
-	);
-
 	// 段落
 	$md = preg_replace( '/<p[^>]*>/si', "\n", $md );
 	$md = str_replace( '</p>', "\n", $md );
@@ -383,9 +405,6 @@ function cleanup_markdown( $md ) {
 
 	// HTMLエンティティをデコード
 	$md = html_entity_decode( $md, ENT_QUOTES, 'UTF-8' );
-
-	// コードブロックを復元
-	$md = str_replace( array_keys( $placeholders ), array_values( $placeholders ), $md );
 
 	// 連続空行を正規化
 	$md = preg_replace( '/\n{3,}/', "\n\n", $md );

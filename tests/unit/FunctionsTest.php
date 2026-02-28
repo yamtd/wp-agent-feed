@@ -9,7 +9,6 @@ use function WpAgentFeed\html_to_markdown;
 use function WpAgentFeed\escape_yaml;
 use function WpAgentFeed\estimate_tokens;
 use function WpAgentFeed\cache_path;
-use function WpAgentFeed\cleanup_markdown;
 use const WpAgentFeed\CACHE_DIR;
 
 /**
@@ -376,13 +375,11 @@ final class FunctionsTest extends TestCase {
 	}
 
 	#[Test]
-	public function crlf_fenced_code_block(): void {
-		// Simulate CRLF line endings in a fenced code block produced by convert_code_blocks.
-		// We test cleanup_markdown directly with pre-built fenced content.
-		$input = "```html\r\n<div>test</div>\r\n```\r\n";
-		// cleanup_markdown is called within html_to_markdown pipeline,
-		// but we can call it directly to test CRLF handling.
-		$result = cleanup_markdown( $input );
-		$this->assertStringContainsString( '<div>test</div>', $result );
+	public function crlf_in_code_block_preserved(): void {
+		// CRLF line endings in source HTML should not break code block preservation.
+		$html = "<pre><code class=\"language-html\">&lt;div&gt;test&lt;/div&gt;\r\n&lt;p&gt;line2&lt;/p&gt;</code></pre>";
+		$md   = html_to_markdown( $html );
+		$this->assertStringContainsString( '<div>test</div>', $md );
+		$this->assertStringContainsString( '<p>line2</p>', $md );
 	}
 }
