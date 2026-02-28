@@ -71,7 +71,17 @@ npx @wordpress/env stop
 | `build_frontmatter()` | YAML フロントマター生成 | Yes |
 | `html_to_markdown()` | HTML → Markdown 変換 | No |
 | `convert_table()` | HTML table → Markdown table | No |
+| `is_overridden()` | wp-config.php オーバーライド検出 | No |
 | `cache_path()` | キャッシュファイルパス生成 | No |
 | `delete_cache()` | キャッシュファイル削除 | No |
+| `clear_all_cache()` | 全キャッシュ .md ファイル削除 | No |
 | `escape_yaml()` | YAML 文字列エスケープ | No |
 | `estimate_tokens()` | トークン数推定 | No |
+| `add_admin_menu()` | Settings メニューにページ追加 | Yes |
+| `register_settings()` | Settings API 登録 | Yes |
+| `sanitize_content_signal()` | Content-Signal サニタイズ | Yes |
+| `sanitize_post_types()` | Post Types サニタイズ | Yes |
+| `render_settings_page()` | 設定ページ全体描画 | Yes |
+| `ajax_regenerate()` | AJAX キャッシュ一括再生成 | Yes |
+| `ajax_clear()` | AJAX キャッシュ全削除 | Yes |
+| `uninstall()` | プラグイン削除時クリーンアップ | Yes |

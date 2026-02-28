@@ -30,6 +30,12 @@ if ( ! defined( 'WpAgentFeed\CONTENT_SIGNAL' ) ) {
 if ( ! function_exists( 'add_action' ) ) {
 	function add_action() {} // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 }
+if ( ! function_exists( 'register_uninstall_hook' ) ) {
+	function register_uninstall_hook() {} // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+}
+if ( ! function_exists( 'get_option' ) ) {
+	function get_option( $option, $default = false ) { return $default; } // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+}
 
 // Load the plugin.
 require_once dirname( __DIR__ ) . '/wp-agent-feed.php';
