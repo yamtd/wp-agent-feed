@@ -1,0 +1,96 @@
+# Copyright (C) 2024 WP Agent Feed
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: WP Agent Feed 0.1.0\n"
+"Report-Msgid-Bugs-To: https://github.com/yamtd/wp-agent-feed/issues\n"
+"POT-Creation-Date: 2026-02-28T00:00:00+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+
+#. Plugin Name of the plugin
+#: wp-agent-feed.php
+msgid "WP Agent Feed"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "General Settings"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Post Types"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Content-Signal"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Configure how WP Agent Feed serves Markdown responses. Settings defined as constants in wp-config.php take priority over these values."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Defined in wp-config.php. Remove the constant to manage this setting here."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "The Content-Signal header value sent with Markdown responses."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Cache Management"
+msgstr ""
+
+#. translators: %s is the cache directory path
+#: wp-agent-feed.php
+msgid "Cache directory: %s"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Regenerate All Cache"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Clear All Cache"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Permission denied."
+msgstr ""
+
+#. translators: %d is the number of deleted cache files
+#: wp-agent-feed.php
+msgid "Deleted %d cache files."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Starting..."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "No posts to process."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Request failed."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "processed..."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "cache files regenerated."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Are you sure you want to clear all cache files?"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Clearing..."
+msgstr ""

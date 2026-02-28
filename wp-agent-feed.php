@@ -40,6 +40,13 @@ if ( ! defined( __NAMESPACE__ . '\CONTENT_SIGNAL' ) ) {
 
 register_uninstall_hook( __FILE__, 'WpAgentFeed\uninstall' );
 
+add_action(
+	'init',
+	function () {
+		load_plugin_textdomain( 'wp-agent-feed', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+	}
+);
+
 /* ========================================
  * 1. 早期インターセプト — Accept ヘッダーの確認とキャッシュ配信
  * ======================================== */
