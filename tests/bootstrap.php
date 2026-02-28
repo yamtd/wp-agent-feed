@@ -15,15 +15,15 @@ if ( ! defined( 'WP_CONTENT_DIR' ) ) {
 }
 
 // Plugin constants — define before loading the plugin so
-// the if-not-defined blocks (lines 17-25) are satisfied.
-if ( ! defined( 'WAF_CACHE_DIR' ) ) {
-	define( 'WAF_CACHE_DIR', sys_get_temp_dir() . '/waf-test-cache/' );
+// the if-not-defined blocks are satisfied.
+if ( ! defined( 'WpAgentFeed\CACHE_DIR' ) ) {
+	define( 'WpAgentFeed\CACHE_DIR', sys_get_temp_dir() . '/waf-test-cache/' );
 }
-if ( ! defined( 'WAF_POST_TYPES' ) ) {
-	define( 'WAF_POST_TYPES', [ 'post', 'page' ] );
+if ( ! defined( 'WpAgentFeed\POST_TYPES' ) ) {
+	define( 'WpAgentFeed\POST_TYPES', [ 'post', 'page' ] );
 }
-if ( ! defined( 'WAF_CONTENT_SIGNAL' ) ) {
-	define( 'WAF_CONTENT_SIGNAL', 'ai-train=no, search=yes, ai-input=yes' );
+if ( ! defined( 'WpAgentFeed\CONTENT_SIGNAL' ) ) {
+	define( 'WpAgentFeed\CONTENT_SIGNAL', 'ai-train=no, search=yes, ai-input=yes' );
 }
 
 // Stub WordPress functions called at the top level of the plugin file.

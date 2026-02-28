@@ -9,41 +9,43 @@
  * Text Domain: wp-agent-feed
  */
 
+namespace WpAgentFeed;
+
 defined( 'ABSPATH' ) || exit;
 
 /* ========================================
  * 設定
  * ======================================== */
-if ( ! defined( 'WAF_CACHE_DIR' ) ) {
-	define( 'WAF_CACHE_DIR', WP_CONTENT_DIR . '/cache/markdown/' );
+if ( ! defined( __NAMESPACE__ . '\CACHE_DIR' ) ) {
+	define( __NAMESPACE__ . '\CACHE_DIR', WP_CONTENT_DIR . '/cache/markdown/' );
 }
-if ( ! defined( 'WAF_POST_TYPES' ) ) {
-	define( 'WAF_POST_TYPES', [ 'post', 'page' ] );
+if ( ! defined( __NAMESPACE__ . '\POST_TYPES' ) ) {
+	define( __NAMESPACE__ . '\POST_TYPES', [ 'post', 'page' ] );
 }
-if ( ! defined( 'WAF_CONTENT_SIGNAL' ) ) {
-	define( 'WAF_CONTENT_SIGNAL', 'ai-train=no, search=yes, ai-input=yes' );
+if ( ! defined( __NAMESPACE__ . '\CONTENT_SIGNAL' ) ) {
+	define( __NAMESPACE__ . '\CONTENT_SIGNAL', 'ai-train=no, search=yes, ai-input=yes' );
 }
 
 /* ========================================
  * 1. 早期インターセプト — Accept ヘッダーの確認とキャッシュ配信
  * ======================================== */
-add_action( 'wp', 'waf_serve_markdown', 1 );
+add_action( 'wp', __NAMESPACE__ . '\serve_markdown', 1 );
 
-function waf_serve_markdown() {
+function serve_markdown() {
 	$accept = $_SERVER['HTTP_ACCEPT'] ?? '';
 	if ( strpos( $accept, 'text/markdown' ) === false ) {
 		return;
 	}
 
-	if ( ! is_singular( WAF_POST_TYPES ) ) {
+	if ( ! is_singular( POST_TYPES ) ) {
 		return;
 	}
 
 	$post_id    = get_queried_object_id();
-	$cache_path = waf_cache_path( $post_id );
+	$cache_path = cache_path( $post_id );
 
 	if ( ! file_exists( $cache_path ) ) {
-		waf_generate_cache( $post_id );
+		generate_cache( $post_id );
 	}
 
 	if ( ! file_exists( $cache_path ) ) {
@@ -54,13 +56,13 @@ function waf_serve_markdown() {
 	if ( false === $markdown ) {
 		return;
 	}
-	$token_count = waf_estimate_tokens( $markdown );
+	$token_count = estimate_tokens( $markdown );
 
 	status_header( 200 );
 	header( 'Content-Type: text/markdown; charset=utf-8' );
 	header( 'Vary: Accept' );
 	header( 'X-Markdown-Tokens: ' . $token_count );
-	header( 'Content-Signal: ' . WAF_CONTENT_SIGNAL );
+	header( 'Content-Signal: ' . CONTENT_SIGNAL );
 	header( 'Content-Length: ' . strlen( $markdown ) );
 	header( 'Cache-Control: public, max-age=3600' );
 
@@ -71,55 +73,55 @@ function waf_serve_markdown() {
 /* ========================================
  * 2. 保存時キャッシュ生成
  * ======================================== */
-add_action( 'save_post', 'waf_on_save_post', 20, 2 );
+add_action( 'save_post', __NAMESPACE__ . '\on_save_post', 20, 2 );
 
-function waf_on_save_post( $post_id, $post ) {
+function on_save_post( $post_id, $post ) {
 	if ( wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
 		return;
 	}
 
-	if ( ! in_array( $post->post_type, WAF_POST_TYPES, true ) ) {
+	if ( ! in_array( $post->post_type, POST_TYPES, true ) ) {
 		return;
 	}
 
 	if ( $post->post_status === 'publish' ) {
-		waf_generate_cache( $post_id );
+		generate_cache( $post_id );
 	} else {
-		waf_delete_cache( $post_id );
+		delete_cache( $post_id );
 	}
 }
 
-add_action( 'trashed_post', 'waf_maybe_delete_cache' );
-add_action( 'deleted_post', 'waf_maybe_delete_cache' );
+add_action( 'trashed_post', __NAMESPACE__ . '\maybe_delete_cache' );
+add_action( 'deleted_post', __NAMESPACE__ . '\maybe_delete_cache' );
 
 /* ========================================
  * 3. Markdown生成（コア処理）
  * ======================================== */
-function waf_generate_cache( $post_id ) {
+function generate_cache( $post_id ) {
 	$post = get_post( $post_id );
 	if ( ! $post || $post->post_status !== 'publish' ) {
 		return false;
 	}
 
-	$frontmatter = waf_build_frontmatter( $post );
-	$html        = waf_get_rendered_content( $post );
-	$markdown    = $frontmatter . waf_html_to_markdown( $html );
+	$frontmatter = build_frontmatter( $post );
+	$html        = get_rendered_content( $post );
+	$markdown    = $frontmatter . html_to_markdown( $html );
 
-	if ( ! is_dir( WAF_CACHE_DIR ) ) {
-		wp_mkdir_p( WAF_CACHE_DIR );
+	if ( ! is_dir( CACHE_DIR ) ) {
+		wp_mkdir_p( CACHE_DIR );
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		if ( false === file_put_contents( WAF_CACHE_DIR . '.htaccess', "# Apache 2.4+\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n\n# Apache 2.2\n<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n" ) ) {
+		if ( false === file_put_contents( CACHE_DIR . '.htaccess', "# Apache 2.4+\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n\n# Apache 2.2\n<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n" ) ) {
 			// translators: %s is the cache directory path.
-			error_log( sprintf( 'WP Agent Feed: Failed to create .htaccess in %s', WAF_CACHE_DIR ) );
+			error_log( sprintf( 'WP Agent Feed: Failed to create .htaccess in %s', CACHE_DIR ) );
 		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-		if ( false === file_put_contents( WAF_CACHE_DIR . 'index.html', '' ) ) {
+		if ( false === file_put_contents( CACHE_DIR . 'index.html', '' ) ) {
 			// translators: %s is the cache directory path.
-			error_log( sprintf( 'WP Agent Feed: Failed to create index.html in %s', WAF_CACHE_DIR ) );
+			error_log( sprintf( 'WP Agent Feed: Failed to create index.html in %s', CACHE_DIR ) );
 		}
 	}
 
-	$dest = waf_cache_path( $post_id );
+	$dest = cache_path( $post_id );
 	$tmp  = $dest . '.tmp';
 
 	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
@@ -145,7 +147,7 @@ function waf_generate_cache( $post_id ) {
 /**
  * the_content フィルターを安全に適用。
  */
-function waf_get_rendered_content( $post ) {
+function get_rendered_content( $post ) {
 	$prev_post       = $GLOBALS['post'] ?? null;
 	$GLOBALS['post'] = $post;
 	setup_postdata( $post );
@@ -165,7 +167,7 @@ function waf_get_rendered_content( $post ) {
 /* ========================================
  * 4. フロントマター生成（Cloudflare互換）
  * ======================================== */
-function waf_build_frontmatter( $post ) {
+function build_frontmatter( $post ) {
 	$title       = $post->post_title;
 	$description = get_the_excerpt( $post );
 	$url         = get_permalink( $post );
@@ -175,15 +177,15 @@ function waf_build_frontmatter( $post ) {
 
 	$lines = [
 		'---',
-		'title: "' . waf_escape_yaml( $title ) . '"',
-		'description: "' . waf_escape_yaml( $description ) . '"',
-		'url: "' . waf_escape_yaml( $url ) . '"',
+		'title: "' . escape_yaml( $title ) . '"',
+		'description: "' . escape_yaml( $description ) . '"',
+		'url: "' . escape_yaml( $url ) . '"',
 		'date: ' . $date,
 		'modified: ' . $modified,
 	];
 
 	if ( $image ) {
-		$lines[] = 'image: "' . waf_escape_yaml( $image ) . '"';
+		$lines[] = 'image: "' . escape_yaml( $image ) . '"';
 	}
 
 	$lines[] = '---';
@@ -195,23 +197,23 @@ function waf_build_frontmatter( $post ) {
 /* ========================================
  * 5. HTML → Markdown 変換（軽量・依存なし）
  * ======================================== */
-function waf_html_to_markdown( $html ) {
+function html_to_markdown( $html ) {
 	$md = trim( $html );
 
-	$md = waf_convert_headings( $md );
-	$md = waf_convert_code_blocks( $md );
-	$md = waf_convert_tables( $md );
-	$md = waf_convert_blockquotes( $md );
-	$md = waf_convert_lists( $md );
-	$md = waf_convert_media( $md );
-	$md = waf_convert_links( $md );
-	$md = waf_convert_inline( $md );
-	$md = waf_cleanup_markdown( $md );
+	$md = convert_headings( $md );
+	$md = convert_code_blocks( $md );
+	$md = convert_tables( $md );
+	$md = convert_blockquotes( $md );
+	$md = convert_lists( $md );
+	$md = convert_media( $md );
+	$md = convert_links( $md );
+	$md = convert_inline( $md );
+	$md = cleanup_markdown( $md );
 
 	return trim( $md ) . "\n";
 }
 
-function waf_convert_headings( $md ) {
+function convert_headings( $md ) {
 	for ( $i = 6; $i >= 1; $i-- ) {
 		$prefix = str_repeat( '#', $i );
 		$md     = preg_replace(
@@ -223,7 +225,7 @@ function waf_convert_headings( $md ) {
 	return $md;
 }
 
-function waf_convert_code_blocks( $md ) {
+function convert_code_blocks( $md ) {
 	// <pre><code> ブロック（言語クラス対応）
 	$md = preg_replace_callback(
 		'/<pre[^>]*>\s*<code[^>]*?(?:class=["\'](?:language-)?(\w+)["\'][^>]*)?>(.*?)<\/code>\s*<\/pre>/si',
@@ -248,19 +250,19 @@ function waf_convert_code_blocks( $md ) {
 	return $md;
 }
 
-function waf_convert_tables( $md ) {
+function convert_tables( $md ) {
 	return preg_replace_callback(
 		'/<table[^>]*>(.*?)<\/table>/si',
-		'waf_convert_table',
+		__NAMESPACE__ . '\convert_table',
 		$md
 	);
 }
 
-function waf_convert_blockquotes( $md ) {
+function convert_blockquotes( $md ) {
 	return preg_replace_callback(
 		'/<blockquote[^>]*>(.*?)<\/blockquote>/si',
 		function ( $m ) {
-			$inner = waf_html_to_markdown( trim( $m[1] ) );
+			$inner = html_to_markdown( trim( $m[1] ) );
 			$lines = explode( "\n", trim( $inner ) );
 			return "\n" . implode( "\n", array_map( fn( $l ) => '> ' . $l, $lines ) ) . "\n";
 		},
@@ -268,7 +270,7 @@ function waf_convert_blockquotes( $md ) {
 	);
 }
 
-function waf_convert_lists( $md ) {
+function convert_lists( $md ) {
 	// 順序なしリスト
 	$md = preg_replace_callback(
 		'/<ul[^>]*>(.*?)<\/ul>/si',
@@ -302,7 +304,7 @@ function waf_convert_lists( $md ) {
 	return $md;
 }
 
-function waf_convert_media( $md ) {
+function convert_media( $md ) {
 	// 画像（属性順序に依存しない統合パターン）
 	$md = preg_replace_callback(
 		'/<img[^>]*\/?>/si',
@@ -328,7 +330,7 @@ function waf_convert_media( $md ) {
 	return $md;
 }
 
-function waf_convert_links( $md ) {
+function convert_links( $md ) {
 	return preg_replace(
 		'/<a[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/si',
 		'[$2]($1)',
@@ -336,7 +338,7 @@ function waf_convert_links( $md ) {
 	);
 }
 
-function waf_convert_inline( $md ) {
+function convert_inline( $md ) {
 	$map = [
 		'strong' => '**',
 		'b'      => '**',
@@ -353,7 +355,7 @@ function waf_convert_inline( $md ) {
 	return $md;
 }
 
-function waf_cleanup_markdown( $md ) {
+function cleanup_markdown( $md ) {
 	// 段落
 	$md = preg_replace( '/<p[^>]*>/si', "\n", $md );
 	$md = str_replace( '</p>', "\n", $md );
@@ -379,7 +381,7 @@ function waf_cleanup_markdown( $md ) {
 /**
  * HTML <table> → Markdown テーブル
  */
-function waf_convert_table( $matches ) {
+function convert_table( $matches ) {
 	$table_html = $matches[1];
 	$rows       = [];
 
@@ -419,32 +421,32 @@ function waf_convert_table( $matches ) {
  * ユーティリティ
  * ======================================== */
 
-function waf_cache_path( $post_id ) {
-	return WAF_CACHE_DIR . intval( $post_id ) . '.md';
+function cache_path( $post_id ) {
+	return CACHE_DIR . intval( $post_id ) . '.md';
 }
 
-function waf_delete_cache( $post_id ) {
-	$path = waf_cache_path( $post_id );
+function delete_cache( $post_id ) {
+	$path = cache_path( $post_id );
 	if ( file_exists( $path ) ) {
 		unlink( $path );
 	}
 }
 
-function waf_maybe_delete_cache( $post_id ) {
+function maybe_delete_cache( $post_id ) {
 	$post_type = get_post_type( $post_id );
-	if ( $post_type && in_array( $post_type, WAF_POST_TYPES, true ) ) {
-		waf_delete_cache( $post_id );
+	if ( $post_type && in_array( $post_type, POST_TYPES, true ) ) {
+		delete_cache( $post_id );
 	}
 }
 
-function waf_escape_yaml( $str ) {
+function escape_yaml( $str ) {
 	return str_replace( [ '\\', '"', "\n", "\r" ], [ '\\\\', '\\"', ' ', '' ], $str );
 }
 
 /**
  * トークン数の推定（英語: ~4文字/token、日本語: ~1.5文字/token の加重平均）
  */
-function waf_estimate_tokens( $text ) {
+function estimate_tokens( $text ) {
 	$bytes = strlen( $text );
 	$len   = function_exists( 'mb_strlen' ) ? mb_strlen( $text, 'UTF-8' ) : $bytes;
 
@@ -459,17 +461,17 @@ function waf_estimate_tokens( $text ) {
  * WP-CLI: キャッシュ一括再生成
  * 使い方: wp markdown-cache regenerate
  * ======================================== */
-if ( defined( 'WP_CLI' ) && WP_CLI ) {
-	WP_CLI::add_command(
+if ( defined( 'WP_CLI' ) && \WP_CLI ) {
+	\WP_CLI::add_command(
 		'markdown-cache',
 		function ( $args, $assoc_args ) {
 			if ( empty( $args[0] ) || $args[0] !== 'regenerate' ) {
-				WP_CLI::error( 'Usage: wp markdown-cache regenerate' );
+				\WP_CLI::error( 'Usage: wp markdown-cache regenerate' );
 			}
 
 			$posts = get_posts(
 				[
-					'post_type'      => WAF_POST_TYPES,
+					'post_type'      => POST_TYPES,
 					'post_status'    => 'publish',
 					'posts_per_page' => -1,
 					'fields'         => 'ids',
@@ -477,14 +479,14 @@ if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			);
 
 			$count = count( $posts );
-			WP_CLI::log( "Regenerating markdown cache for {$count} posts..." );
+			\WP_CLI::log( "Regenerating markdown cache for {$count} posts..." );
 
 			foreach ( $posts as $i => $post_id ) {
-				waf_generate_cache( $post_id );
-				WP_CLI::log( sprintf( '  [%d/%d] Post #%d', $i + 1, $count, $post_id ) );
+				generate_cache( $post_id );
+				\WP_CLI::log( sprintf( '  [%d/%d] Post #%d', $i + 1, $count, $post_id ) );
 			}
 
-			WP_CLI::success( "Done. {$count} cache files generated in " . WAF_CACHE_DIR );
+			\WP_CLI::success( "Done. {$count} cache files generated in " . CACHE_DIR );
 		}
 	);
 }
