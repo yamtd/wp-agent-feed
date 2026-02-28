@@ -107,11 +107,39 @@ function waf_generate_cache( $post_id ) {
 
 	if ( ! is_dir( WAF_CACHE_DIR ) ) {
 		wp_mkdir_p( WAF_CACHE_DIR );
-		file_put_contents( WAF_CACHE_DIR . '.htaccess', "# Apache 2.4+\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n\n# Apache 2.2\n<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n" );
-		file_put_contents( WAF_CACHE_DIR . 'index.html', '' );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		if ( false === file_put_contents( WAF_CACHE_DIR . '.htaccess', "# Apache 2.4+\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n\n# Apache 2.2\n<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n" ) ) {
+			// translators: %s is the cache directory path.
+			error_log( sprintf( 'WP Agent Feed: Failed to create .htaccess in %s', WAF_CACHE_DIR ) );
+		}
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		if ( false === file_put_contents( WAF_CACHE_DIR . 'index.html', '' ) ) {
+			// translators: %s is the cache directory path.
+			error_log( sprintf( 'WP Agent Feed: Failed to create index.html in %s', WAF_CACHE_DIR ) );
+		}
 	}
 
-	return file_put_contents( waf_cache_path( $post_id ), $markdown ) !== false;
+	$dest = waf_cache_path( $post_id );
+	$tmp  = $dest . '.tmp';
+
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+	if ( false === file_put_contents( $tmp, $markdown, LOCK_EX ) ) {
+		// translators: %s is the temp file path.
+		error_log( sprintf( 'WP Agent Feed: Failed to write temp cache %s', $tmp ) );
+		return false;
+	}
+
+	// rename() is atomic on the same filesystem.
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.rename_rename
+	if ( ! rename( $tmp, $dest ) ) {
+		// translators: %1$s is the temp path, %2$s is the destination path.
+		error_log( sprintf( 'WP Agent Feed: Failed to rename %1$s to %2$s', $tmp, $dest ) );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+		unlink( $tmp );
+		return false;
+	}
+
+	return true;
 }
 
 /**
@@ -149,13 +177,13 @@ function waf_build_frontmatter( $post ) {
 		'---',
 		'title: "' . waf_escape_yaml( $title ) . '"',
 		'description: "' . waf_escape_yaml( $description ) . '"',
-		'url: ' . $url,
+		'url: "' . waf_escape_yaml( $url ) . '"',
 		'date: ' . $date,
 		'modified: ' . $modified,
 	];
 
 	if ( $image ) {
-		$lines[] = 'image: ' . $image;
+		$lines[] = 'image: "' . waf_escape_yaml( $image ) . '"';
 	}
 
 	$lines[] = '---';
