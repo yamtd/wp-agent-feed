@@ -104,7 +104,7 @@ function waf_generate_cache( $post_id ) {
 
 	if ( ! is_dir( WAF_CACHE_DIR ) ) {
 		wp_mkdir_p( WAF_CACHE_DIR );
-		file_put_contents( WAF_CACHE_DIR . '.htaccess', "Deny from all\n" );
+		file_put_contents( WAF_CACHE_DIR . '.htaccess', "# Apache 2.4+\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n\n# Apache 2.2\n<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n" );
 		file_put_contents( WAF_CACHE_DIR . 'index.html', '' );
 	}
 
@@ -362,8 +362,8 @@ function waf_escape_yaml( $str ) {
  * トークン数の推定（英語: ~4文字/token、日本語: ~1.5文字/token の加重平均）
  */
 function waf_estimate_tokens( $text ) {
-	$len   = mb_strlen( $text, 'UTF-8' );
 	$bytes = strlen( $text );
+	$len   = function_exists( 'mb_strlen' ) ? mb_strlen( $text, 'UTF-8' ) : $bytes;
 
 	$mb_ratio        = ( $bytes > 0 ) ? 1 - ( $len / $bytes ) : 0;
 	$chars_per_token = 4 - ( $mb_ratio * 2.5 );

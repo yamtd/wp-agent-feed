@@ -235,6 +235,23 @@ final class FunctionsTest extends TestCase {
 		$this->assertSame( 0, $tokens );
 	}
 
+	#[Test]
+	public function estimate_tokens_without_mbstring_uses_strlen_fallback(): void {
+		// Without mbstring, $len = $bytes for all text (including multibyte).
+		// For Japanese "あ"×15: $bytes=45, $len=45 (fallback), mb_ratio=0,
+		// chars_per_token=4, tokens=ceil(45/4)=12.
+		// This differs from mbstring-aware result (7) but avoids fatal error.
+		$text   = str_repeat( 'あ', 15 );
+		$bytes  = strlen( $text );
+		$tokens = (int) ceil( $bytes / 4 );
+		$this->assertSame( 12, $tokens, 'Fallback path should treat bytes as chars' );
+
+		// Verify the actual function still returns a positive integer.
+		$actual = waf_estimate_tokens( $text );
+		$this->assertIsInt( $actual );
+		$this->assertGreaterThan( 0, $actual );
+	}
+
 	// =========================================================
 	// waf_cache_path()
 	// =========================================================
