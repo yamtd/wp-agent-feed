@@ -288,4 +288,95 @@ final class FunctionsTest extends TestCase {
 		$path = waf_cache_path( 'abc' );
 		$this->assertSame( WAF_CACHE_DIR . '0.md', $path );
 	}
+
+	// =========================================================
+	// Code block preservation in waf_html_to_markdown()
+	// =========================================================
+
+	#[Test]
+	public function code_block_preserves_html_tags(): void {
+		$html = '<pre><code class="language-html">&lt;div class=&quot;container&quot;&gt;&lt;p&gt;Hello&lt;/p&gt;&lt;/div&gt;</code></pre>';
+		$md   = waf_html_to_markdown( $html );
+		$this->assertStringContainsString( '```html', $md );
+		$this->assertStringContainsString( '<div class="container"><p>Hello</p></div>', $md );
+	}
+
+	#[Test]
+	public function multiple_code_blocks_preserve_html_tags(): void {
+		$html  = '<p>Intro</p>';
+		$html .= '<pre><code class="language-html">&lt;div&gt;first&lt;/div&gt;</code></pre>';
+		$html .= '<p>Middle</p>';
+		$html .= '<pre><code>&lt;span&gt;second&lt;/span&gt;</code></pre>';
+		$html .= '<p>End</p>';
+		$md    = waf_html_to_markdown( $html );
+		$this->assertStringContainsString( '<div>first</div>', $md );
+		$this->assertStringContainsString( '<span>second</span>', $md );
+		$this->assertStringContainsString( 'Intro', $md );
+		$this->assertStringContainsString( 'Middle', $md );
+		$this->assertStringContainsString( 'End', $md );
+	}
+
+	#[Test]
+	public function pre_without_code_preserves_html_tags(): void {
+		$html = '<pre>&lt;p&gt;Hello&lt;/p&gt;</pre>';
+		$md   = waf_html_to_markdown( $html );
+		$this->assertStringContainsString( '<p>Hello</p>', $md );
+	}
+
+	#[Test]
+	public function remaining_tags_stripped_with_code_block(): void {
+		$html  = '<div><span>visible text</span></div>';
+		$html .= '<pre><code class="language-html">&lt;div&gt;code content&lt;/div&gt;</code></pre>';
+		$md    = waf_html_to_markdown( $html );
+		$this->assertStringContainsString( 'visible text', $md );
+		$this->assertStringContainsString( '<div>code content</div>', $md );
+	}
+
+	#[Test]
+	public function code_block_entities_not_double_decoded(): void {
+		$html = '<pre><code>&amp;amp; entity</code></pre>';
+		$md   = waf_html_to_markdown( $html );
+		$this->assertStringContainsString( '&amp; entity', $md );
+	}
+
+	#[Test]
+	public function blockquote_with_code_block_preserves_html(): void {
+		$html = '<blockquote><pre><code class="language-html">&lt;div&gt;quoted code&lt;/div&gt;</code></pre></blockquote>';
+		$md   = waf_html_to_markdown( $html );
+		$this->assertStringContainsString( '<div>quoted code</div>', $md );
+	}
+
+	#[Test]
+	public function code_block_preserves_p_br_hr_tags(): void {
+		$html = '<pre><code class="language-html">&lt;p&gt;para&lt;/p&gt;&lt;br&gt;&lt;hr&gt;</code></pre>';
+		$md   = waf_html_to_markdown( $html );
+		$this->assertStringContainsString( '<p>para</p><br><hr>', $md );
+	}
+
+	#[Test]
+	public function code_block_with_blockquote_fence_inside(): void {
+		// A top-level code block containing "> ```" should not terminate early.
+		$html = '<pre><code>&gt; ```' . "\n" . 'content' . "\n" . '&gt; ```</code></pre>';
+		$md   = waf_html_to_markdown( $html );
+		$this->assertStringContainsString( '> ```', $md );
+		$this->assertStringContainsString( 'content', $md );
+	}
+
+	#[Test]
+	public function empty_fenced_code_block(): void {
+		$html = '<pre><code></code></pre>';
+		$md   = waf_html_to_markdown( $html );
+		$this->assertStringContainsString( "```\n\n```", $md );
+	}
+
+	#[Test]
+	public function crlf_fenced_code_block(): void {
+		// Simulate CRLF line endings in a fenced code block produced by waf_convert_code_blocks.
+		// We test waf_cleanup_markdown directly with pre-built fenced content.
+		$input = "```html\r\n<div>test</div>\r\n```\r\n";
+		// waf_cleanup_markdown is called within waf_html_to_markdown pipeline,
+		// but we can call it directly to test CRLF handling.
+		$result = waf_cleanup_markdown( $input );
+		$this->assertStringContainsString( '<div>test</div>', $result );
+	}
 }
