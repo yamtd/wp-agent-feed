@@ -1,0 +1,11 @@
+# Exclude development files from GitHub source archives (`git archive`)
+/.editorconfig      export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/.phpcs.xml.dist    export-ignore
+/.wp-env.json       export-ignore
+/CLAUDE.md          export-ignore
+/composer.json      export-ignore
+/composer.lock      export-ignore
+/phpunit.xml.dist   export-ignore
+/tests/             export-ignore
