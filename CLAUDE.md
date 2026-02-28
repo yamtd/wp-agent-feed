@@ -31,8 +31,7 @@ npx @wordpress/env stop
 
 ## コーディング規約
 
-- 関数名: `waf_` prefix
-- 定数名: `WAF_` prefix
+- 名前空間: `WpAgentFeed`（全関数・定数はこの名前空間内）
 - コーディングスタイル: WordPress Coding Standards（PHPCS で自動検証）
 
 ## レスポンスヘッダー契約
@@ -42,7 +41,7 @@ npx @wordpress/env stop
 - `Content-Type: text/markdown; charset=utf-8`
 - `Vary: Accept`
 - `X-Markdown-Tokens: {数値}`
-- `Content-Signal: {WAF_CONTENT_SIGNAL}`
+- `Content-Signal: {WpAgentFeed\CONTENT_SIGNAL}`
 
 ## PHP バージョン方針
 
@@ -61,18 +60,18 @@ npx @wordpress/env stop
 
 ## アーキテクチャ
 
-主要関数（`wp-agent-feed.php`）:
+主要関数（`wp-agent-feed.php`、名前空間 `WpAgentFeed`）:
 
 | 関数 | 役割 | WP依存 |
 |------|------|--------|
-| `waf_serve_markdown()` | Accept ヘッダー確認 → キャッシュ配信 | Yes |
-| `waf_on_save_post()` | 保存時キャッシュ生成/削除 | Yes |
-| `waf_generate_cache()` | Markdown ファイル生成 | Yes |
-| `waf_get_rendered_content()` | the_content フィルター適用 | Yes |
-| `waf_build_frontmatter()` | YAML フロントマター生成 | Yes |
-| `waf_html_to_markdown()` | HTML → Markdown 変換 | No |
-| `waf_convert_table()` | HTML table → Markdown table | No |
-| `waf_cache_path()` | キャッシュファイルパス生成 | No |
-| `waf_delete_cache()` | キャッシュファイル削除 | No |
-| `waf_escape_yaml()` | YAML 文字列エスケープ | No |
-| `waf_estimate_tokens()` | トークン数推定 | No |
+| `serve_markdown()` | Accept ヘッダー確認 → キャッシュ配信 | Yes |
+| `on_save_post()` | 保存時キャッシュ生成/削除 | Yes |
+| `generate_cache()` | Markdown ファイル生成 | Yes |
+| `get_rendered_content()` | the_content フィルター適用 | Yes |
+| `build_frontmatter()` | YAML フロントマター生成 | Yes |
+| `html_to_markdown()` | HTML → Markdown 変換 | No |
+| `convert_table()` | HTML table → Markdown table | No |
+| `cache_path()` | キャッシュファイルパス生成 | No |
+| `delete_cache()` | キャッシュファイル削除 | No |
+| `escape_yaml()` | YAML 文字列エスケープ | No |
+| `estimate_tokens()` | トークン数推定 | No |
