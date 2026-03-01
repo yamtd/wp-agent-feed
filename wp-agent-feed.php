@@ -37,6 +37,14 @@ if ( ! defined( __NAMESPACE__ . '\CONTENT_SIGNAL' ) ) {
 } else {
 	is_overridden( 'CONTENT_SIGNAL', true );
 }
+if ( ! defined( __NAMESPACE__ . '\CACHE_CONTROL' ) ) {
+	define(
+		__NAMESPACE__ . '\CACHE_CONTROL',
+		get_option( 'wp_agent_feed_cache_control', 'public, max-age=3600' )
+	);
+} else {
+	is_overridden( 'CACHE_CONTROL', true );
+}
 
 register_uninstall_hook( __FILE__, 'WpAgentFeed\uninstall' );
 
@@ -87,7 +95,9 @@ function serve_markdown() {
 	header( 'X-Markdown-Tokens: ' . $token_count );
 	header( 'Content-Signal: ' . CONTENT_SIGNAL );
 	header( 'Content-Length: ' . strlen( $markdown ) );
-	header( 'Cache-Control: public, max-age=3600' );
+	if ( CACHE_CONTROL !== '' ) {
+		header( 'Cache-Control: ' . CACHE_CONTROL );
+	}
 
 	echo $markdown;
 	exit;
@@ -745,6 +755,19 @@ function register_settings() {
 		$has_editable = true;
 	}
 
+	if ( ! is_overridden( 'CACHE_CONTROL' ) ) {
+		register_setting(
+			'wp_agent_feed_settings',
+			'wp_agent_feed_cache_control',
+			array(
+				'type'              => 'string',
+				'sanitize_callback' => __NAMESPACE__ . '\sanitize_cache_control',
+				'default'           => 'public, max-age=3600',
+			)
+		);
+		$has_editable = true;
+	}
+
 	if ( ! is_overridden( 'POST_TYPES' ) ) {
 		register_setting(
 			'wp_agent_feed_settings',
@@ -780,6 +803,14 @@ function register_settings() {
 		'wp-agent-feed',
 		'wp_agent_feed_general'
 	);
+
+	add_settings_field(
+		'wp_agent_feed_cache_control',
+		__( 'Cache-Control', 'wp-agent-feed' ),
+		__NAMESPACE__ . '\render_field_cache_control',
+		'wp-agent-feed',
+		'wp_agent_feed_general'
+	);
 }
 
 /**
@@ -790,6 +821,17 @@ function register_settings() {
  */
 function sanitize_content_signal( $value ) {
 	return sanitize_text_field( $value );
+}
+
+/**
+ * Cache-Control 値のサニタイズ。
+ *
+ * @param string $value Raw input.
+ * @return string Sanitized value (empty string disables the header).
+ */
+function sanitize_cache_control( $value ) {
+	$value = sanitize_text_field( $value );
+	return str_replace( array( "\r", "\n" ), '', $value );
 }
 
 /**
@@ -847,6 +889,31 @@ function render_field_content_signal() {
 	);
 	echo '<p class="description">';
 	esc_html_e( 'The Content-Signal header value sent with Markdown responses.', 'wp-agent-feed' );
+	echo '</p>';
+}
+
+/**
+ * Cache-Control テキストフィールドの描画。
+ */
+function render_field_cache_control() {
+	if ( is_overridden( 'CACHE_CONTROL' ) ) {
+		echo '<code>' . esc_html( CACHE_CONTROL ) . '</code>';
+		echo '<p class="description">';
+		esc_html_e(
+			'Defined in wp-config.php. Remove the constant to manage this setting here.',
+			'wp-agent-feed'
+		);
+		echo '</p>';
+		return;
+	}
+
+	$value = get_option( 'wp_agent_feed_cache_control', 'public, max-age=3600' );
+	printf(
+		'<input type="text" id="wp_agent_feed_cache_control" name="wp_agent_feed_cache_control" value="%s" class="regular-text" />',
+		esc_attr( $value )
+	);
+	echo '<p class="description">';
+	esc_html_e( 'The Cache-Control header value sent with Markdown responses. Leave empty to not send this header.', 'wp-agent-feed' );
 	echo '</p>';
 }
 
@@ -1004,7 +1071,7 @@ function render_settings_page() {
 		return;
 	}
 
-	$all_overridden = is_overridden( 'CONTENT_SIGNAL' ) && is_overridden( 'POST_TYPES' );
+	$all_overridden = is_overridden( 'CONTENT_SIGNAL' ) && is_overridden( 'POST_TYPES' ) && is_overridden( 'CACHE_CONTROL' );
 	?>
 	<div class="wrap">
 		<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
@@ -1223,8 +1290,10 @@ function ajax_live_test() {
 		'X-Markdown-Tokens' => (string) $token_count,
 		'Content-Signal'    => CONTENT_SIGNAL,
 		'Content-Length'    => (string) strlen( $body ),
-		'Cache-Control'     => 'public, max-age=3600',
 	);
+	if ( CACHE_CONTROL !== '' ) {
+		$headers['Cache-Control'] = CACHE_CONTROL;
+	}
 
 	wp_send_json_success(
 		array(
@@ -1542,4 +1611,5 @@ function uninstall() {
 
 	delete_option( 'wp_agent_feed_content_signal' );
 	delete_option( 'wp_agent_feed_post_types' );
+	delete_option( 'wp_agent_feed_cache_control' );
 }
