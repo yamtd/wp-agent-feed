@@ -1211,14 +1211,7 @@ function ajax_live_test() {
 
 	$result = validate_markdown_output( $body, CONTENT_SIGNAL );
 
-	$preview = '';
-	if ( strlen( $body ) > 0 ) {
-		$lines   = explode( "\n", $body );
-		$preview = implode( "\n", array_slice( $lines, 0, 10 ) );
-		if ( count( $lines ) > 10 ) {
-			$preview .= "\n...";
-		}
-	}
+	$preview = $body;
 
 	$post_title  = get_the_title( $post_id );
 	$token_count = estimate_tokens( $body );
@@ -1477,7 +1470,7 @@ function render_diagnostics_script() {
 
 			if (data.headers || data.preview) {
 				html += '<details style="margin-top:12px">';
-				html += '<summary>' + escHtml('<?php echo esc_js( __( 'Response Preview', 'wp-agent-feed' ) ); ?>') + '</summary>';
+				html += '<summary style="cursor:pointer">' + escHtml('<?php echo esc_js( __( 'Response Preview', 'wp-agent-feed' ) ); ?>') + '</summary>';
 				var pre = '';
 				if (data.headers) {
 					for (var h in data.headers) {
@@ -1490,7 +1483,7 @@ function render_diagnostics_script() {
 				if (data.preview) {
 					pre += data.preview;
 				}
-				html += '<pre style="background:#f0f0f1;padding:12px;overflow-x:auto;max-height:300px;margin-top:8px"><code>' +
+				html += '<pre style="background:#f0f0f1;padding:12px;overflow:auto;max-height:300px;margin-top:8px"><code>' +
 					escHtml(pre) + '</code></pre></details>';
 			}
 
