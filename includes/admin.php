@@ -601,6 +601,7 @@ function ajax_regenerate() {
 			array(
 				'post_type'      => POST_TYPES,
 				'post_status'    => 'publish',
+				'has_password'   => false,
 				'posts_per_page' => -1,
 				'fields'         => 'ids',
 				'orderby'        => 'ID',
