@@ -1,0 +1,100 @@
+/**
+ * WP Agent Feed — Admin settings page styles.
+ *
+ * Browser support: Baseline 2024 (no fallbacks).
+ *
+ * @package WpAgentFeed
+ */
+
+@layer components {
+	@scope (.waf-settings) {
+		/* --- Tokens --- */
+		:scope {
+			--color-ok: #00a32a;
+			--color-warn: #dba617;
+			--color-error: #d63638;
+			--color-neutral: #787c82;
+			--preview-bg: #f0f0f1;
+			--space-sm: 8px;
+			--space-md: 12px;
+			--icon-size: 20px;
+		}
+
+		/* --- Status panel --- */
+		:where(.status-table) {
+			max-width: 600px;
+		}
+
+		:where(.status-icon) {
+			width: 24px;
+
+			& .dashicons {
+				margin-block: calc((1lh - var(--icon-size)) / 2);
+			}
+		}
+
+		:where(.status-ok) {
+			color: var(--color-ok);
+		}
+
+		:where(.status-warn) {
+			color: var(--color-warn);
+		}
+
+		:where(.status-error) {
+			color: var(--color-error);
+		}
+
+		:where(.status-neutral) {
+			color: var(--color-neutral);
+		}
+
+		/* --- Action buttons & inline status --- */
+		:where(.inline-status) {
+			margin-inline-start: var(--space-sm);
+		}
+
+		:where(.button-group) {
+			margin-block-start: var(--space-md);
+		}
+
+		/* --- Diagnostic result panels --- */
+		:where(.result-panel) {
+			display: none;
+			margin-block-start: var(--space-md);
+		}
+
+		/* --- Verify output check results --- */
+		:where(.check-table) {
+			max-width: 700px;
+
+			& :where(.status-icon) {
+				width: 24px;
+			}
+		}
+
+		/* --- Code preview --- */
+		:where(.code-preview) {
+			background: var(--preview-bg);
+			padding: var(--space-md);
+			overflow: auto;
+			max-height: 300px;
+			margin-block-start: var(--space-sm);
+		}
+
+		/* --- Response preview details --- */
+		:where(.response-details) {
+			margin-block-start: var(--space-md);
+
+			& > summary {
+				cursor: pointer;
+			}
+		}
+
+		/* --- Post type checkbox labels --- */
+		:where(.post-type-label) {
+			display: block;
+			margin-block-end: 4px;
+		}
+	}
+}
