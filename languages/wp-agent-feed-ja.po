@@ -210,3 +210,23 @@ msgstr "件成功、"
 #: wp-agent-feed.php
 msgid "failed."
 msgstr "件失敗。"
+
+#: wp-agent-feed.php
+msgid "Check HTTP Headers"
+msgstr "HTTP ヘッダーを確認"
+
+#: wp-agent-feed.php
+msgid "Checking..."
+msgstr "確認中…"
+
+#: wp-agent-feed.php
+msgid "Could not connect to the server. This feature may not work in local development environments."
+msgstr "サーバーに接続できませんでした。この機能はローカル開発環境では動作しない場合があります。"
+
+#: wp-agent-feed.php
+msgid "The server may restrict HEAD requests. If headers appear incorrect, try a GET request with cURL."
+msgstr "サーバーが HEAD リクエストを制限している可能性があります。ヘッダーが正しく表示されない場合は、cURL で GET リクエストをお試しください。"
+
+#: wp-agent-feed.php
+msgid "Duplicate headers may not be accurately displayed on your WordPress version."
+msgstr "お使いの WordPress バージョンでは重複ヘッダーが正確に表示されない場合があります。"

@@ -207,3 +207,23 @@ msgstr ""
 #: wp-agent-feed.php
 msgid "failed."
 msgstr ""
+
+#: wp-agent-feed.php
+msgid "Check HTTP Headers"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Checking..."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Could not connect to the server. This feature may not work in local development environments."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "The server may restrict HEAD requests. If headers appear incorrect, try a GET request with cURL."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Duplicate headers may not be accurately displayed on your WordPress version."
+msgstr ""
