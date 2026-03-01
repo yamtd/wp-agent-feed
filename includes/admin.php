@@ -133,7 +133,11 @@ function register_settings() {
  * @return string Sanitized value.
  */
 function sanitize_content_signal( $value ) {
-	return sanitize_text_field( $value );
+	$value = sanitize_text_field( $value );
+	if ( '' === $value ) {
+		return 'ai-train=no, search=yes, ai-input=yes';
+	}
+	return $value;
 }
 
 /**
@@ -249,9 +253,8 @@ function render_field_cache_control() {
 	$default = 'public, max-age=3600';
 	$value   = get_option( 'wp_agent_feed_cache_control', $default );
 	printf(
-		'<input type="text" id="wp_agent_feed_cache_control" name="wp_agent_feed_cache_control" value="%s" class="regular-text" placeholder="%s" />',
-		esc_attr( $value ),
-		esc_attr( $default )
+		'<input type="text" id="wp_agent_feed_cache_control" name="wp_agent_feed_cache_control" value="%s" class="regular-text" />',
+		esc_attr( $value )
 	);
 	echo '<p class="description">';
 	esc_html_e(
