@@ -410,32 +410,12 @@ function build_status_rows( $data ) {
 }
 
 /**
- * ステータス & 診断パネルの HTML を描画。
+ * キャッシュ管理セクションの HTML を描画。
+ *
+ * Settings タブ内でフォームの後に配置される。
  */
-function render_status_panel() {
-	$data = get_diagnostics_data();
-
-	// Cache directory status.
-	$rows = build_status_rows( $data );
-	$labels = array(
-		'dir' => __( 'Cache directory', 'wp-agent-feed' ),
-		'ht'  => __( '.htaccess protection', 'wp-agent-feed' ),
-		'cov' => __( 'Cache coverage', 'wp-agent-feed' ),
-	);
+function render_cache_section() {
 	?>
-	<h2><?php esc_html_e( 'Status', 'wp-agent-feed' ); ?></h2>
-	<table class="widefat striped status-table">
-		<tbody>
-			<?php foreach ( $rows as $row ) : ?>
-			<tr>
-				<td class="status-icon"><span id="agfd-status-<?php echo esc_attr( $row['id'] ); ?>-icon" class="dashicons <?php echo esc_attr( $row['icon'] ); ?> <?php echo esc_attr( $row['css_class'] ); ?>"></span></td>
-				<td><?php echo esc_html( $labels[ $row['id'] ] ); ?></td>
-				<td id="agfd-status-<?php echo esc_attr( $row['id'] ); ?>-text"><?php echo esc_html( $row['text'] ); ?></td>
-			</tr>
-			<?php endforeach; ?>
-		</tbody>
-	</table>
-
 	<h2><?php esc_html_e( 'Cache Management', 'wp-agent-feed' ); ?></h2>
 	<p>
 		<?php
@@ -455,8 +435,36 @@ function render_status_panel() {
 		</button>
 		<span id="wp-agent-feed-status" class="inline-status"></span>
 	</p>
+	<?php
+}
 
-	<h2><?php esc_html_e( 'Diagnostics', 'wp-agent-feed' ); ?></h2>
+/**
+ * 診断パネルの HTML を描画。
+ *
+ * ステータステーブル + 出力検証 + ヘッダー確認。
+ */
+function render_diagnostics_panel() {
+	$data = get_diagnostics_data();
+
+	$rows   = build_status_rows( $data );
+	$labels = array(
+		'dir' => __( 'Cache directory', 'wp-agent-feed' ),
+		'ht'  => __( '.htaccess protection', 'wp-agent-feed' ),
+		'cov' => __( 'Cache coverage', 'wp-agent-feed' ),
+	);
+	?>
+	<h2><?php esc_html_e( 'Status', 'wp-agent-feed' ); ?></h2>
+	<table class="widefat striped status-table">
+		<tbody>
+			<?php foreach ( $rows as $row ) : ?>
+			<tr>
+				<td class="status-icon"><span id="agfd-status-<?php echo esc_attr( $row['id'] ); ?>-icon" class="dashicons <?php echo esc_attr( $row['icon'] ); ?> <?php echo esc_attr( $row['css_class'] ); ?>"></span></td>
+				<td><?php echo esc_html( $labels[ $row['id'] ] ); ?></td>
+				<td id="agfd-status-<?php echo esc_attr( $row['id'] ); ?>-text"><?php echo esc_html( $row['text'] ); ?></td>
+			</tr>
+			<?php endforeach; ?>
+		</tbody>
+	</table>
 	<p class="button-group">
 		<button type="button" class="button" id="wp-agent-feed-live-test">
 			<?php esc_html_e( 'Verify Output', 'wp-agent-feed' ); ?>
@@ -491,8 +499,8 @@ function render_settings_page() {
 			<input type="radio" name="agfd-tab" id="agfd-tab-settings" checked class="tab-radio" />
 			<label for="agfd-tab-settings" class="tab-label"><?php esc_html_e( 'Settings', 'wp-agent-feed' ); ?></label>
 
-			<input type="radio" name="agfd-tab" id="agfd-tab-status" class="tab-radio" />
-			<label for="agfd-tab-status" class="tab-label"><?php esc_html_e( 'Status & Tools', 'wp-agent-feed' ); ?></label>
+			<input type="radio" name="agfd-tab" id="agfd-tab-diagnostics" class="tab-radio" />
+			<label for="agfd-tab-diagnostics" class="tab-label"><?php esc_html_e( 'Diagnostics', 'wp-agent-feed' ); ?></label>
 
 			<div class="tab-panel panel-settings">
 				<?php if ( $all_overridden ) : ?>
@@ -506,10 +514,11 @@ function render_settings_page() {
 						?>
 					</form>
 				<?php endif; ?>
+				<?php render_cache_section(); ?>
 			</div>
 
-			<div class="tab-panel panel-status">
-				<?php render_status_panel(); ?>
+			<div class="tab-panel panel-diagnostics">
+				<?php render_diagnostics_panel(); ?>
 			</div>
 		</div>
 
@@ -851,6 +860,16 @@ function render_admin_script() {
 			});
 		}
 
+		/* --- Dirty form detection --- */
+
+		var settingsForm = document.querySelector('.panel-settings form');
+		var dirty = false;
+		var unsavedMsg = '<?php echo esc_js( __( 'You have unsaved setting changes. Save changes before regenerating cache.', 'wp-agent-feed' ) ); ?>';
+		if (settingsForm) {
+			settingsForm.addEventListener('change', function() { dirty = true; });
+			settingsForm.addEventListener('submit', function() { dirty = false; });
+		}
+
 		/* --- Cache management --- */
 
 		var status   = document.getElementById('wp-agent-feed-status');
@@ -921,9 +940,13 @@ function render_admin_script() {
 			});
 		}
 
-		btnRegen.addEventListener('click', function() { regenerate(0); });
+		btnRegen.addEventListener('click', function() {
+			if (dirty && !confirm(unsavedMsg)) { return; }
+			regenerate(0);
+		});
 
 		btnClear.addEventListener('click', function() {
+			if (dirty && !confirm(unsavedMsg)) { return; }
 			if (!confirm('<?php echo esc_js( __( 'Are you sure you want to clear all cache files?', 'wp-agent-feed' ) ); ?>')) {
 				return;
 			}

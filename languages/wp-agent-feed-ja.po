@@ -124,16 +124,16 @@ msgid "Settings"
 msgstr "設定"
 
 #: includes/admin.php
-msgid "Status & Tools"
-msgstr "ステータスと管理"
-
-#: includes/admin.php
 msgid "Status"
 msgstr "ステータス"
 
 #: includes/admin.php
 msgid "Diagnostics"
-msgstr "動作検証"
+msgstr "診断"
+
+#: includes/admin.php
+msgid "You have unsaved setting changes. Save changes before regenerating cache."
+msgstr "未保存の設定変更があります。キャッシュを再生成する前に変更を保存してください。"
 
 #: includes/admin.php
 msgid "Writable"

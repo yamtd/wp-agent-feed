@@ -141,7 +141,7 @@
 		}
 
 		:where(#agfd-tab-settings:checked ~ .panel-settings),
-		:where(#agfd-tab-status:checked ~ .panel-status) {
+		:where(#agfd-tab-diagnostics:checked ~ .panel-diagnostics) {
 			display: block;
 		}
 	}

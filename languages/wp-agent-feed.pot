@@ -121,15 +121,15 @@ msgid "Settings"
 msgstr ""
 
 #: includes/admin.php
-msgid "Status & Tools"
-msgstr ""
-
-#: includes/admin.php
 msgid "Status"
 msgstr ""
 
 #: includes/admin.php
 msgid "Diagnostics"
+msgstr ""
+
+#: includes/admin.php
+msgid "You have unsaved setting changes. Save changes before regenerating cache."
 msgstr ""
 
 #: includes/admin.php
