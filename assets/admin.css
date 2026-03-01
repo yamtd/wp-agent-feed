@@ -100,7 +100,7 @@
 		/* --- Tabs --- */
 		:where(.tabs) {
 			display: grid;
-			grid-template-columns: repeat(3, auto) 1fr;
+			grid-template-columns: repeat(2, auto) 1fr;
 			margin-block-start: var(--space-md);
 		}
 
@@ -140,9 +140,8 @@
 			padding-block-start: var(--space-md);
 		}
 
-		:where(#agfd-tab-status:checked ~ .panel-status),
 		:where(#agfd-tab-settings:checked ~ .panel-settings),
-		:where(#agfd-tab-cache:checked ~ .panel-cache) {
+		:where(#agfd-tab-status:checked ~ .panel-status) {
 			display: block;
 		}
 	}

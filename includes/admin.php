@@ -423,6 +423,7 @@ function render_status_panel() {
 		'cov' => __( 'Cache coverage', 'wp-agent-feed' ),
 	);
 	?>
+	<h2><?php esc_html_e( 'Status', 'wp-agent-feed' ); ?></h2>
 	<table class="widefat striped status-table">
 		<tbody>
 			<?php foreach ( $rows as $row ) : ?>
@@ -434,6 +435,28 @@ function render_status_panel() {
 			<?php endforeach; ?>
 		</tbody>
 	</table>
+
+	<h2><?php esc_html_e( 'Cache Management', 'wp-agent-feed' ); ?></h2>
+	<p>
+		<?php
+		printf(
+			/* translators: %s is the cache directory path */
+			esc_html__( 'Cache directory: %s', 'wp-agent-feed' ),
+			'<code>' . esc_html( CACHE_DIR ) . '</code>'
+		);
+		?>
+	</p>
+	<p>
+		<button type="button" class="button button-primary" id="wp-agent-feed-regenerate">
+			<?php esc_html_e( 'Regenerate All Cache', 'wp-agent-feed' ); ?>
+		</button>
+		<button type="button" class="button" id="wp-agent-feed-clear">
+			<?php esc_html_e( 'Clear All Cache', 'wp-agent-feed' ); ?>
+		</button>
+		<span id="wp-agent-feed-status" class="inline-status"></span>
+	</p>
+
+	<h2><?php esc_html_e( 'Diagnostics', 'wp-agent-feed' ); ?></h2>
 	<p class="button-group">
 		<button type="button" class="button" id="wp-agent-feed-live-test">
 			<?php esc_html_e( 'Verify Output', 'wp-agent-feed' ); ?>
@@ -465,18 +488,11 @@ function render_settings_page() {
 		<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
 		<div class="tabs">
-			<input type="radio" name="agfd-tab" id="agfd-tab-status" checked class="tab-radio" />
-			<label for="agfd-tab-status" class="tab-label"><?php esc_html_e( 'Status', 'wp-agent-feed' ); ?></label>
-
-			<input type="radio" name="agfd-tab" id="agfd-tab-settings" class="tab-radio" />
+			<input type="radio" name="agfd-tab" id="agfd-tab-settings" checked class="tab-radio" />
 			<label for="agfd-tab-settings" class="tab-label"><?php esc_html_e( 'Settings', 'wp-agent-feed' ); ?></label>
 
-			<input type="radio" name="agfd-tab" id="agfd-tab-cache" class="tab-radio" />
-			<label for="agfd-tab-cache" class="tab-label"><?php esc_html_e( 'Cache', 'wp-agent-feed' ); ?></label>
-
-			<div class="tab-panel panel-status">
-				<?php render_status_panel(); ?>
-			</div>
+			<input type="radio" name="agfd-tab" id="agfd-tab-status" class="tab-radio" />
+			<label for="agfd-tab-status" class="tab-label"><?php esc_html_e( 'Status & Tools', 'wp-agent-feed' ); ?></label>
 
 			<div class="tab-panel panel-settings">
 				<?php if ( $all_overridden ) : ?>
@@ -492,26 +508,8 @@ function render_settings_page() {
 				<?php endif; ?>
 			</div>
 
-			<div class="tab-panel panel-cache">
-				<h2><?php esc_html_e( 'Cache Management', 'wp-agent-feed' ); ?></h2>
-				<p>
-					<?php
-					printf(
-						/* translators: %s is the cache directory path */
-						esc_html__( 'Cache directory: %s', 'wp-agent-feed' ),
-						'<code>' . esc_html( CACHE_DIR ) . '</code>'
-					);
-					?>
-				</p>
-				<p>
-					<button type="button" class="button button-primary" id="wp-agent-feed-regenerate">
-						<?php esc_html_e( 'Regenerate All Cache', 'wp-agent-feed' ); ?>
-					</button>
-					<button type="button" class="button" id="wp-agent-feed-clear">
-						<?php esc_html_e( 'Clear All Cache', 'wp-agent-feed' ); ?>
-					</button>
-					<span id="wp-agent-feed-status" class="inline-status"></span>
-				</p>
+			<div class="tab-panel panel-status">
+				<?php render_status_panel(); ?>
 			</div>
 		</div>
 

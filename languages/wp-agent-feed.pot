@@ -121,11 +121,15 @@ msgid "Settings"
 msgstr ""
 
 #: includes/admin.php
+msgid "Status & Tools"
+msgstr ""
+
+#: includes/admin.php
 msgid "Status"
 msgstr ""
 
 #: includes/admin.php
-msgid "Cache"
+msgid "Diagnostics"
 msgstr ""
 
 #: includes/admin.php

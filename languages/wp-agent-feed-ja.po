@@ -124,12 +124,16 @@ msgid "Settings"
 msgstr "設定"
 
 #: includes/admin.php
+msgid "Status & Tools"
+msgstr "ステータスと管理"
+
+#: includes/admin.php
 msgid "Status"
 msgstr "ステータス"
 
 #: includes/admin.php
-msgid "Cache"
-msgstr "キャッシュ"
+msgid "Diagnostics"
+msgstr "動作検証"
 
 #: includes/admin.php
 msgid "Writable"
