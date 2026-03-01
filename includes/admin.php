@@ -208,9 +208,13 @@ function render_field_content_signal() {
 	$default = 'ai-train=no, search=yes, ai-input=yes';
 	$value   = get_option( 'wp_agent_feed_content_signal', $default );
 	printf(
-		'<input type="text" id="wp_agent_feed_content_signal" name="wp_agent_feed_content_signal" value="%s" class="regular-text" placeholder="%s" />',
-		esc_attr( $value ),
-		esc_attr( $default )
+		'<input type="text" id="wp_agent_feed_content_signal" name="wp_agent_feed_content_signal" value="%s" class="regular-text" />',
+		esc_attr( $value )
+	);
+	printf(
+		' <button type="button" class="use-recommended" data-target="wp_agent_feed_content_signal" data-value="%s">%s</button>',
+		esc_attr( $default ),
+		esc_html__( 'Use recommended', 'wp-agent-feed' )
 	);
 	echo '<p class="description">';
 	esc_html_e(
@@ -224,15 +228,20 @@ function render_field_content_signal() {
 		'<code>' . esc_html( $default ) . '</code>'
 	);
 	echo '</p>';
-	echo '<p class="description">';
+	echo '<dl class="directive-list">';
 	printf(
-		/* translators: 1: ai-train directive, 2: search directive, 3: ai-input directive */
-		esc_html__( '%1$s = disallow AI training, %2$s = allow search indexing, %3$s = allow AI assistants to reference your content when answering user questions.', 'wp-agent-feed' ),
-		'<code>ai-train=no</code>',
-		'<code>search=yes</code>',
-		'<code>ai-input=yes</code>'
+		'<dt><code>ai-train=no</code></dt><dd>%s</dd>',
+		esc_html__( 'Disallow AI training', 'wp-agent-feed' )
 	);
-	echo '</p>';
+	printf(
+		'<dt><code>search=yes</code></dt><dd>%s</dd>',
+		esc_html__( 'Allow search indexing', 'wp-agent-feed' )
+	);
+	printf(
+		'<dt><code>ai-input=yes</code></dt><dd>%s</dd>',
+		esc_html__( 'Allow AI assistants to reference your content', 'wp-agent-feed' )
+	);
+	echo '</dl>';
 }
 
 /**
@@ -250,11 +259,16 @@ function render_field_cache_control() {
 		return;
 	}
 
-	$default = 'public, max-age=3600';
-	$value   = get_option( 'wp_agent_feed_cache_control', $default );
+	$recommended = 'public, max-age=3600';
+	$value       = get_option( 'wp_agent_feed_cache_control', $recommended );
 	printf(
 		'<input type="text" id="wp_agent_feed_cache_control" name="wp_agent_feed_cache_control" value="%s" class="regular-text" />',
 		esc_attr( $value )
+	);
+	printf(
+		' <button type="button" class="use-recommended" data-target="wp_agent_feed_cache_control" data-value="%s">%s</button>',
+		esc_attr( $recommended ),
+		esc_html__( 'Use recommended', 'wp-agent-feed' )
 	);
 	echo '<p class="description">';
 	esc_html_e(
@@ -263,11 +277,25 @@ function render_field_cache_control() {
 	);
 	echo '<br>';
 	printf(
-		/* translators: %s is the default value */
-		esc_html__( 'Default: %s', 'wp-agent-feed' ),
-		'<code>' . esc_html( $default ) . '</code>'
+		/* translators: %s is the recommended value */
+		esc_html__( 'Recommended: %s', 'wp-agent-feed' ),
+		'<code>' . esc_html( $recommended ) . '</code>'
 	);
 	echo '</p>';
+	echo '<dl class="directive-list">';
+	printf(
+		'<dt><code>public</code></dt><dd>%s</dd>',
+		esc_html__( 'Allow CDN and proxy caches', 'wp-agent-feed' )
+	);
+	printf(
+		'<dt><code>private</code></dt><dd>%s</dd>',
+		esc_html__( 'Browser cache only (no CDN)', 'wp-agent-feed' )
+	);
+	printf(
+		'<dt><code>max-age</code></dt><dd>%s</dd>',
+		esc_html__( 'Cache duration in seconds (3600 = 1 hour)', 'wp-agent-feed' )
+	);
+	echo '</dl>';
 }
 
 /**
@@ -878,6 +906,18 @@ function render_admin_script() {
 				});
 			});
 		}
+
+		/* --- "Use recommended" buttons --- */
+
+		document.querySelectorAll('.use-recommended').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				var input = document.getElementById(this.dataset.target);
+				if (input) {
+					input.value = this.dataset.value;
+					input.dispatchEvent(new Event('change', { bubbles: true }));
+				}
+			});
+		});
 
 		/* --- Dirty form detection --- */
 

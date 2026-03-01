@@ -38,6 +38,7 @@ if ( ! defined( __NAMESPACE__ . '\CONTENT_SIGNAL' ) ) {
 	define(
 		__NAMESPACE__ . '\CONTENT_SIGNAL',
 		get_option( 'wp_agent_feed_content_signal', 'ai-train=no, search=yes, ai-input=yes' )
+			?: 'ai-train=no, search=yes, ai-input=yes'
 	);
 } else {
 	is_overridden( 'CONTENT_SIGNAL', true );

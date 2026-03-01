@@ -49,9 +49,16 @@ msgstr ""
 msgid "This HTTP header tells AI agents how they may use your content. The default allows search engines and AI assistants to read your content but disallows AI model training."
 msgstr ""
 
-#. translators: 1: ai-train directive, 2: search directive, 3: ai-input directive
 #: includes/admin.php
-msgid "%1$s = disallow AI training, %2$s = allow search indexing, %3$s = allow AI assistants to reference your content when answering user questions."
+msgid "Disallow AI training"
+msgstr ""
+
+#: includes/admin.php
+msgid "Allow search indexing"
+msgstr ""
+
+#: includes/admin.php
+msgid "Allow AI assistants to reference your content"
 msgstr ""
 
 #: includes/admin.php
@@ -61,6 +68,27 @@ msgstr ""
 #. translators: %s is the default value
 #: includes/admin.php
 msgid "Default: %s"
+msgstr ""
+
+#. translators: %s is the recommended value
+#: includes/admin.php
+msgid "Recommended: %s"
+msgstr ""
+
+#: includes/admin.php
+msgid "Use recommended"
+msgstr ""
+
+#: includes/admin.php
+msgid "Allow CDN and proxy caches"
+msgstr ""
+
+#: includes/admin.php
+msgid "Browser cache only (no CDN)"
+msgstr ""
+
+#: includes/admin.php
+msgid "Cache duration in seconds (3600 = 1 hour)"
 msgstr ""
 
 #: includes/admin.php

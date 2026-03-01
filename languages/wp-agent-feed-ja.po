@@ -52,10 +52,17 @@ msgstr "Cache-Control"
 msgid "This HTTP header tells AI agents how they may use your content. The default allows search engines and AI assistants to read your content but disallows AI model training."
 msgstr "この HTTP ヘッダーは、AI エージェントがコンテンツをどのように利用できるかを示します。デフォルトでは、検索エンジンや AI アシスタントによる閲覧を許可し、AI モデルの学習利用を禁止します。"
 
-#. translators: 1: ai-train directive, 2: search directive, 3: ai-input directive
 #: includes/admin.php
-msgid "%1$s = disallow AI training, %2$s = allow search indexing, %3$s = allow AI assistants to reference your content when answering user questions."
-msgstr "%1$s = AI 学習利用を禁止、%2$s = 検索インデックスを許可、%3$s = AI アシスタントがユーザーの質問に回答する際にコンテンツを参照することを許可。"
+msgid "Disallow AI training"
+msgstr "AI 学習利用を禁止"
+
+#: includes/admin.php
+msgid "Allow search indexing"
+msgstr "検索インデックスを許可"
+
+#: includes/admin.php
+msgid "Allow AI assistants to reference your content"
+msgstr "AI アシスタントによるコンテンツ参照を許可"
 
 #: includes/admin.php
 msgid "Controls how long browsers and CDNs may cache the Markdown response. Leave empty to let the server decide."
@@ -65,6 +72,27 @@ msgstr "ブラウザや CDN が Markdown レスポンスをキャッシュする
 #: includes/admin.php
 msgid "Default: %s"
 msgstr "デフォルト: %s"
+
+#. translators: %s is the recommended value
+#: includes/admin.php
+msgid "Recommended: %s"
+msgstr "推奨: %s"
+
+#: includes/admin.php
+msgid "Use recommended"
+msgstr "推奨値を使用"
+
+#: includes/admin.php
+msgid "Allow CDN and proxy caches"
+msgstr "CDN やプロキシキャッシュを許可"
+
+#: includes/admin.php
+msgid "Browser cache only (no CDN)"
+msgstr "ブラウザキャッシュのみ（CDN なし）"
+
+#: includes/admin.php
+msgid "Cache duration in seconds (3600 = 1 hour)"
+msgstr "キャッシュ時間（秒単位、3600 = 1時間）"
 
 #: includes/admin.php
 msgid "Select which post types are available as Markdown for AI agents and search tools. Only published content of the selected types will be served."

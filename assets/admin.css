@@ -3,6 +3,10 @@
  *
  * Browser support: Baseline 2024 (no fallbacks).
  *
+ * Cascade isolation:
+ *   @layer components  — WP core (unlayered) always wins
+ *   @scope .agfd-settings — selectors cannot leak outside
+ *
  * @package WpAgentFeed
  */
 
@@ -21,60 +25,47 @@
 		}
 
 		/* --- Status panel --- */
-		:where(.status-table) {
+		.status-table {
 			max-width: 600px;
 		}
 
-		:where(.status-icon) {
+		.status-icon {
 			width: 24px;
 
 			& .dashicons {
 				margin-block: calc((1lh - var(--icon-size)) / 2);
+				color: var(--status-color, var(--color-neutral));
 			}
 		}
 
-		:where(.status-ok) {
-			color: var(--color-ok);
-		}
-
-		:where(.status-warn) {
-			color: var(--color-warn);
-		}
-
-		:where(.status-error) {
-			color: var(--color-error);
-		}
-
-		:where(.status-neutral) {
-			color: var(--color-neutral);
-		}
+		/* Status modifiers — set custom property only */
+		.status-ok      { --status-color: var(--color-ok); }
+		.status-warn    { --status-color: var(--color-warn); }
+		.status-error   { --status-color: var(--color-error); }
+		.status-neutral { --status-color: var(--color-neutral); }
 
 		/* --- Action buttons & inline status --- */
-		:where(.inline-status) {
+		.inline-status {
 			margin-inline-start: var(--space-sm);
 		}
 
-		:where(.button-group) {
+		.button-group {
 			margin-block-start: var(--space-md);
 		}
 
 		/* --- Diagnostic result panels --- */
-		:where(.result-panel) {
+		.result-panel {
 			display: none;
 			margin-block-start: var(--space-md);
 		}
 
 		/* --- Verify output check results --- */
-		:where(.check-table) {
+		.check-table {
 			max-width: 700px;
-
-			& :where(.status-icon) {
-				width: 24px;
-			}
 		}
 
 		/* --- Code preview --- */
-		:where(.code-preview) {
+		.code-preview {
 			background: var(--preview-bg);
 			padding: var(--space-md);
 			overflow: auto;
@@ -83,7 +74,7 @@
 		}
 
 		/* --- Response preview details --- */
-		:where(.response-details) {
+		.response-details {
 			margin-block-start: var(--space-md);
 
 			& > summary {
@@ -91,26 +82,69 @@
 			}
 		}
 
+		/* --- Directive reference list --- */
+		.directive-list {
+			display: grid;
+			grid-template-columns: auto 1fr;
+			margin-block: 4px 0;
+			font-size: 13px;
+			color: #646970;
+
+			& dt, & dd {
+				margin: 0;
+				padding: 3px 0;
+				border-block-end: 1px solid #f0f0f1;
+			}
+
+			& dt {
+				padding-inline-end: var(--space-sm);
+			}
+
+			& dt:last-of-type, & dd:last-of-type {
+				border-block-end: none;
+			}
+		}
+
+		/* --- "Use recommended" outline button --- */
+		.use-recommended {
+			border: 1px solid var(--wp-admin-theme-color, #2271b1);
+			color: var(--wp-admin-theme-color, #2271b1);
+			background: transparent;
+			padding: 2px 8px;
+			border-radius: 3px;
+			font-size: 13px;
+			line-height: 1.5;
+			text-decoration: none;
+			cursor: pointer;
+			vertical-align: middle;
+
+			@media (any-hover: hover) {
+				&:hover {
+					background: color-mix(in srgb, var(--wp-admin-theme-color, #2271b1) 8%, transparent);
+				}
+			}
+		}
+
 		/* --- Post type checkbox labels --- */
-		:where(.post-type-label) {
+		.post-type-label {
 			display: block;
 			margin-block-end: 4px;
 		}
 
 		/* --- Tabs --- */
-		:where(.tabs) {
+		.tabs {
 			display: grid;
 			grid-template-columns: repeat(2, auto) 1fr;
 			margin-block-start: var(--space-md);
 		}
 
-		:where(.tab-radio) {
+		.tab-radio {
 			position: absolute;
 			opacity: 0;
 			pointer-events: none;
 		}
 
-		:where(.tab-label) {
+		.tab-label {
 			padding: var(--space-sm) var(--space-md);
 			cursor: pointer;
 			border-block-end: 2px solid transparent;
@@ -124,24 +158,24 @@
 			}
 		}
 
-		:where(.tab-radio:checked + .tab-label) {
+		.tab-radio:checked + .tab-label {
 			border-color: var(--wp-admin-theme-color, #2271b1);
 			font-weight: 600;
 		}
 
-		:where(.tab-radio:focus-visible + .tab-label) {
+		.tab-radio:focus-visible + .tab-label {
 			outline: 2px solid var(--wp-admin-theme-color, #2271b1);
 			outline-offset: -2px;
 		}
 
-		:where(.tab-panel) {
+		.tab-panel {
 			display: none;
 			grid-column: 1 / -1;
 			padding-block-start: var(--space-md);
 		}
 
-		:where(#agfd-tab-settings:checked ~ .panel-settings),
-		:where(#agfd-tab-diagnostics:checked ~ .panel-diagnostics) {
+		#agfd-tab-settings:checked ~ .panel-settings,
+		#agfd-tab-diagnostics:checked ~ .panel-diagnostics {
 			display: block;
 		}
 	}
