@@ -1285,6 +1285,9 @@ function clear_all_cache() {
 
 	$count = 0;
 	foreach ( $files as $file ) {
+		if ( ! preg_match( '/^\d+\.md$/', basename( $file ) ) ) {
+			continue;
+		}
 		// phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
 		if ( unlink( $file ) ) {
 			++$count;
