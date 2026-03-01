@@ -218,7 +218,7 @@ function render_field_content_signal() {
 	);
 	echo '<p class="description">';
 	esc_html_e(
-		'This HTTP header tells AI agents how they may use your content. The default allows search engines and AI assistants to read your content but disallows AI model training.',
+		'This HTTP header signals your preferences for how AI agents may use your content. Compliance is voluntary, similar to robots.txt.',
 		'wp-agent-feed'
 	);
 	echo '<br>';
@@ -228,20 +228,23 @@ function render_field_content_signal() {
 		'<code>' . esc_html( $default ) . '</code>'
 	);
 	echo '</p>';
-	echo '<dl class="directive-list">';
+	echo '<details class="directive-ref">';
+	printf( '<summary>%s</summary>', esc_html__( 'What each value means', 'wp-agent-feed' ) );
+	echo '<table class="directive-table"><tbody>';
 	printf(
-		'<dt><code>ai-train=no</code></dt><dd>%s</dd>',
-		esc_html__( 'Disallow AI training', 'wp-agent-feed' )
+		'<tr><td><code>ai-train=no</code></td><td>%s</td></tr>',
+		esc_html__( 'Request no AI training', 'wp-agent-feed' )
 	);
 	printf(
-		'<dt><code>search=yes</code></dt><dd>%s</dd>',
-		esc_html__( 'Allow search indexing', 'wp-agent-feed' )
+		'<tr><td><code>search=yes</code></td><td>%s</td></tr>',
+		esc_html__( 'Search indexing acceptable', 'wp-agent-feed' )
 	);
 	printf(
-		'<dt><code>ai-input=yes</code></dt><dd>%s</dd>',
-		esc_html__( 'Allow AI assistants to reference your content', 'wp-agent-feed' )
+		'<tr><td><code>ai-input=yes</code></td><td>%s</td></tr>',
+		esc_html__( 'AI assistant reference acceptable', 'wp-agent-feed' )
 	);
-	echo '</dl>';
+	echo '</tbody></table>';
+	echo '</details>';
 }
 
 /**
@@ -282,20 +285,23 @@ function render_field_cache_control() {
 		'<code>' . esc_html( $recommended ) . '</code>'
 	);
 	echo '</p>';
-	echo '<dl class="directive-list">';
+	echo '<details class="directive-ref">';
+	printf( '<summary>%s</summary>', esc_html__( 'What each value means', 'wp-agent-feed' ) );
+	echo '<table class="directive-table"><tbody>';
 	printf(
-		'<dt><code>public</code></dt><dd>%s</dd>',
+		'<tr><td><code>public</code></td><td>%s</td></tr>',
 		esc_html__( 'Allow CDN and proxy caches', 'wp-agent-feed' )
 	);
 	printf(
-		'<dt><code>private</code></dt><dd>%s</dd>',
+		'<tr><td><code>private</code></td><td>%s</td></tr>',
 		esc_html__( 'Browser cache only (no CDN)', 'wp-agent-feed' )
 	);
 	printf(
-		'<dt><code>max-age</code></dt><dd>%s</dd>',
+		'<tr><td><code>max-age</code></td><td>%s</td></tr>',
 		esc_html__( 'Cache duration in seconds (3600 = 1 hour)', 'wp-agent-feed' )
 	);
-	echo '</dl>';
+	echo '</tbody></table>';
+	echo '</details>';
 }
 
 /**

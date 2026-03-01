@@ -82,27 +82,22 @@
 			}
 		}
 
-		/* --- Directive reference list --- */
-		.directive-list {
-			display: grid;
-			grid-template-columns: auto 1fr;
-			margin-block: 4px 0;
+		/* --- Directive reference (collapsible) --- */
+		.directive-ref {
+			margin-block: 1em 0;
+
+			& > summary {
+				cursor: pointer;
+				font-size: 13px;
+				color: #646970;
+			}
+		}
+
+		.directive-table {
+			margin-block: 0.5em 0;
 			font-size: 13px;
 			color: #646970;
-
-			& dt, & dd {
-				margin: 0;
-				padding: 3px 0;
-				border-block-end: 1px solid #f0f0f1;
-			}
-
-			& dt {
-				padding-inline-end: var(--space-sm);
-			}
-
-			& dt:last-of-type, & dd:last-of-type {
-				border-block-end: none;
-			}
+			border: 1px solid var(--color-neutral);
 		}
 
 		/* --- "Use recommended" outline button --- */

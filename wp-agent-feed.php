@@ -3,7 +3,7 @@
  * Plugin Name: WP Agent Feed
  * Plugin URI: https://github.com/yamtd/wp-agent-feed
  * Description: Accept: text/markdown ヘッダー付きリクエストに対して、投稿コンテンツをMarkdownで返す。保存時に静的キャッシュを生成するパフォーマンス重視設計。
- * Version: 0.3.1
+ * Version: 0.4.0
  * Requires PHP: 7.4
  * Author: Yamada Tadaaki
  * Author URI: https://github.com/yamtd

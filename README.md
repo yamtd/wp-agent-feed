@@ -98,13 +98,33 @@ define( 'WpAgentFeed\CACHE_CONTROL', 'public, max-age=3600' );                  
 wp markdown-cache regenerate
 ```
 
+## Content-Signal について
+
+`Content-Signal` は [Cloudflare が提案した HTTP ヘッダー](https://blog.cloudflare.com/content-signals-policy/)で、
+AI エージェントに対してコンテンツの利用に関する希望を伝えるものです。
+IETF の [AIPREF ワーキンググループ](https://datatracker.ietf.org/doc/draft-ietf-aipref-attach/)で標準化が進められています。
+
+| 値 | 意味 |
+|---|---|
+| `ai-train=no` | AI モデルの学習に使用しないよう要請 |
+| `search=yes` | 検索インデックスへの利用を許容 |
+| `ai-input=yes` | AI アシスタントの参照（RAG 等）を許容 |
+
+> **重要**: robots.txt と同様に、これは**意思表示（preference）**であり、技術的な強制力はありません。
+> AI クローラーがこのヘッダーを尊重するかどうかは各サービスの実装に依存します。
+
+参考:
+- [Content Signals Policy — Cloudflare Blog](https://blog.cloudflare.com/content-signals-policy/)
+- [contentsignals.org](https://contentsignals.org/)
+- [draft-ietf-aipref-attach — IETF Datatracker](https://datatracker.ietf.org/doc/draft-ietf-aipref-attach/)
+
 ## 注意事項
 
 - HTML→Markdown変換はWordPressの `the_content` 出力（標準的なブロック要素）に最適化。
   カスタムショートコードや複雑なネストされたテーブルは完全に変換されない場合がある。
 - ネストされたリスト（`<ul>` / `<ol>` の入れ子）やネストされた `<blockquote>` は
   正しく階層化されない場合がある。単一階層のリスト・引用は正常に変換される。
-- `Content-Signal` のデフォルトは `ai-train=no`（トレーニング不許可）。
+- `Content-Signal` のデフォルトは `ai-train=no`（AI 学習への利用を望まないことを通知）。
   ポリシーに合わせて変更のこと。
 - プラグイン**無効化**時、キャッシュディレクトリは削除されない。
   管理画面から**削除**した場合はキャッシュファイル・DB オプションが自動クリーンアップされる。

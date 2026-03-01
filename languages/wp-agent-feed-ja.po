@@ -3,7 +3,7 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: WP Agent Feed 0.3.1\n"
+"Project-Id-Version: WP Agent Feed 0.4.0\n"
 "Report-Msgid-Bugs-To: https://github.com/yamtd/wp-agent-feed/issues\n"
 "POT-Creation-Date: 2026-03-01T00:00:00+00:00\n"
 "PO-Revision-Date: 2026-03-01T00:00:00+09:00\n"
@@ -49,20 +49,24 @@ msgid "Cache-Control"
 msgstr "Cache-Control"
 
 #: includes/admin.php
-msgid "This HTTP header tells AI agents how they may use your content. The default allows search engines and AI assistants to read your content but disallows AI model training."
-msgstr "この HTTP ヘッダーは、AI エージェントがコンテンツをどのように利用できるかを示します。デフォルトでは、検索エンジンや AI アシスタントによる閲覧を許可し、AI モデルの学習利用を禁止します。"
+msgid "This HTTP header signals your preferences for how AI agents may use your content. Compliance is voluntary, similar to robots.txt."
+msgstr "この HTTP ヘッダーは、AI エージェントに対してコンテンツの利用に関する希望を伝えます。robots.txt と同様に、準拠は任意です。"
 
 #: includes/admin.php
-msgid "Disallow AI training"
-msgstr "AI 学習利用を禁止"
+msgid "What each value means"
+msgstr "各項目の意味"
 
 #: includes/admin.php
-msgid "Allow search indexing"
-msgstr "検索インデックスを許可"
+msgid "Request no AI training"
+msgstr "AI 学習への利用を望まないことを通知"
 
 #: includes/admin.php
-msgid "Allow AI assistants to reference your content"
-msgstr "AI アシスタントによるコンテンツ参照を許可"
+msgid "Search indexing acceptable"
+msgstr "検索インデックスへの利用を許容"
+
+#: includes/admin.php
+msgid "AI assistant reference acceptable"
+msgstr "AI アシスタントの参照を許容"
 
 #: includes/admin.php
 msgid "Controls how long browsers and CDNs may cache the Markdown response. Leave empty to let the server decide."
