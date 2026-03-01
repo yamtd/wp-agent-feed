@@ -94,3 +94,113 @@ msgstr ""
 #: wp-agent-feed.php
 msgid "Clearing..."
 msgstr ""
+
+#: wp-agent-feed.php
+msgid "Settings"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Status"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Writable"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Not writable"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Does not exist"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Present"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Missing"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "No published posts"
+msgstr ""
+
+#. translators: 1: cached count, 2: total count
+#: wp-agent-feed.php
+msgid "%1$d / %2$d posts cached"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Cache directory"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid ".htaccess protection"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Cache coverage"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Run Live Test"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Testing..."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "All checks passed. Markdown serving is working correctly."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Some checks failed."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Tested URL:"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Check"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Expected"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Actual"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Response Preview"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "No published posts found. Publish at least one post to run the live test."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Could not resolve permalink for test post."
+msgstr ""
+
+#. translators: %s is the error message
+#: wp-agent-feed.php
+msgid "Loopback request failed: %s"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "This may indicate that loopback requests are blocked. Check your server firewall or security plugin settings."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "succeeded,"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "failed."
+msgstr ""
