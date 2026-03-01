@@ -1060,6 +1060,13 @@ function render_status_panel() {
 		<span id="wp-agent-feed-live-test-status" style="margin-left: 8px;"></span>
 	</p>
 	<div id="wp-agent-feed-live-test-result" style="display: none; margin-top: 12px;"></div>
+	<p style="margin-top: 12px;">
+		<button type="button" class="button" id="wp-agent-feed-check-headers">
+			<?php esc_html_e( 'Check HTTP Headers', 'wp-agent-feed' ); ?>
+		</button>
+		<span id="wp-agent-feed-check-headers-status" style="margin-left: 8px;"></span>
+	</p>
+	<div id="wp-agent-feed-check-headers-result" style="display: none; margin-top: 12px;"></div>
 	<?php
 }
 
@@ -1126,6 +1133,7 @@ function render_settings_page() {
 add_action( 'wp_ajax_wp_agent_feed_regenerate', __NAMESPACE__ . '\ajax_regenerate' );
 add_action( 'wp_ajax_wp_agent_feed_clear', __NAMESPACE__ . '\ajax_clear' );
 add_action( 'wp_ajax_wp_agent_feed_live_test', __NAMESPACE__ . '\ajax_live_test' );
+add_action( 'wp_ajax_wp_agent_feed_check_headers', __NAMESPACE__ . '\ajax_check_headers' );
 
 /**
  * AJAX: キャッシュ一括再生成（バッチ処理）。
@@ -1303,6 +1311,88 @@ function ajax_live_test() {
 			'title'   => $post_title,
 			'headers' => $headers,
 			'preview' => $preview,
+		)
+	);
+}
+
+/**
+ * AJAX: 実際の HTTP レスポンスヘッダーを取得。
+ */
+function ajax_check_headers() {
+	check_ajax_referer( 'wp_agent_feed_cache' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( __( 'Permission denied.', 'wp-agent-feed' ), 403 );
+	}
+
+	$posts = get_posts(
+		array(
+			'post_type'      => POST_TYPES,
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+			'fields'         => 'ids',
+		)
+	);
+
+	if ( empty( $posts ) ) {
+		wp_send_json_error(
+			array(
+				'code'    => 'no_posts',
+				'message' => __( 'No published posts found. Publish at least one post to run the test.', 'wp-agent-feed' ),
+			)
+		);
+	}
+
+	$url = get_permalink( $posts[0] );
+
+	$response = wp_remote_head(
+		$url,
+		array(
+			'timeout' => 10,
+			'headers' => array( 'Accept' => 'text/markdown' ),
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		wp_send_json_error(
+			array(
+				'code'    => 'connection_failed',
+				'message' => __( 'Could not connect to the server. This feature may not work in local development environments.', 'wp-agent-feed' ),
+			)
+		);
+	}
+
+	$status      = wp_remote_retrieve_response_code( $response );
+	$headers_obj = wp_remote_retrieve_headers( $response );
+	$raw_headers = array();
+	$fallback    = false;
+
+	if ( is_object( $headers_obj ) && method_exists( $headers_obj, 'getAll' ) ) {
+		// WP 6.2+ (Requests v2): getAll() returns all headers including duplicates.
+		foreach ( $headers_obj->getAll() as $key => $values ) {
+			foreach ( (array) $values as $value ) {
+				$raw_headers[] = $key . ': ' . $value;
+			}
+		}
+	} else {
+		// Fallback: iterate as array (duplicates may be merged).
+		$fallback = true;
+		foreach ( $headers_obj as $key => $value ) {
+			$raw_headers[] = $key . ': ' . $value;
+		}
+	}
+
+	$head_warning = ( 405 === $status || 501 === $status || empty( $raw_headers ) );
+
+	wp_send_json_success(
+		array(
+			'url'          => $url,
+			'status'       => $status,
+			'raw_headers'  => $raw_headers,
+			'head_warning' => $head_warning,
+			'fallback'     => $fallback,
 		)
 	);
 }
@@ -1558,6 +1648,72 @@ function render_diagnostics_script() {
 
 			resultEl.innerHTML = html;
 			resultEl.style.display = 'block';
+		}
+
+		/* --- Check HTTP Headers --- */
+		var hdrBtn      = document.getElementById('wp-agent-feed-check-headers');
+		var hdrStatusEl = document.getElementById('wp-agent-feed-check-headers-status');
+		var hdrResultEl = document.getElementById('wp-agent-feed-check-headers-result');
+
+		if (hdrBtn) {
+			hdrBtn.addEventListener('click', function() {
+				hdrBtn.disabled = true;
+				hdrStatusEl.textContent = '<?php echo esc_js( __( 'Checking...', 'wp-agent-feed' ) ); ?>';
+				hdrResultEl.style.display = 'none';
+				hdrResultEl.innerHTML = '';
+
+				var hdrData = new FormData();
+				hdrData.append('action', 'wp_agent_feed_check_headers');
+				hdrData.append('_ajax_nonce', nonce);
+
+				fetch(ajaxUrl, { method: 'POST', body: hdrData, credentials: 'same-origin' })
+					.then(function(r) { return r.json(); })
+					.then(function(json) {
+						hdrBtn.disabled = false;
+						hdrStatusEl.textContent = '';
+
+						if (!json.success) {
+							var errMsg = (json.data && json.data.message) ? json.data.message : (json.data || 'Unknown error');
+							hdrResultEl.innerHTML = '<div class="notice notice-error inline"><p>' + escHtml(errMsg) + '</p></div>';
+							hdrResultEl.style.display = 'block';
+							return;
+						}
+
+						var d = json.data;
+						var statusCode = d.status || '?';
+						var statusClass = (statusCode >= 200 && statusCode < 300) ? 'notice-info' : 'notice-warning';
+						var html = '<div class="notice ' + statusClass + ' inline"><p><strong>HTTP ' + escHtml(String(statusCode)) + '</strong> &mdash; ' + escHtml(d.url) + '</p></div>';
+
+						if (d.head_warning) {
+							html += '<div class="notice notice-warning inline"><p>' +
+								escHtml('<?php echo esc_js( __( 'The server may restrict HEAD requests. If headers appear incorrect, try a GET request with cURL.', 'wp-agent-feed' ) ); ?>') +
+								'</p></div>';
+						}
+						if (d.fallback) {
+							html += '<div class="notice notice-info inline"><p>' +
+								escHtml('<?php echo esc_js( __( 'Duplicate headers may not be accurately displayed on your WordPress version.', 'wp-agent-feed' ) ); ?>') +
+								'</p></div>';
+						}
+
+						if (d.raw_headers && d.raw_headers.length) {
+							html += '<pre style="background:#f0f0f1;padding:12px;overflow:auto;max-height:300px;margin-top:8px"><code>';
+							for (var i = 0; i < d.raw_headers.length; i++) {
+								html += escHtml(d.raw_headers[i]) + '\n';
+							}
+							html += '</code></pre>';
+						}
+
+						hdrResultEl.innerHTML = html;
+						hdrResultEl.style.display = 'block';
+					})
+					.catch(function() {
+						hdrBtn.disabled = false;
+						hdrStatusEl.textContent = '';
+						hdrResultEl.innerHTML = '<div class="notice notice-error inline"><p>' +
+							escHtml('<?php echo esc_js( __( 'Request failed.', 'wp-agent-feed' ) ); ?>') + '</p></div>';
+						hdrResultEl.style.display = 'block';
+					});
+			});
 		}
 	})();
 	/* ]]> */
