@@ -17,17 +17,21 @@ wp-content/plugins/wp-agent-feed/wp-agent-feed.php
 
 に配置し、管理画面 > プラグインから「WP Agent Feed」を有効化。
 
-### Nginx の場合
+### キャッシュディレクトリの保護
 
-Apache では .htaccess で自動保護されるが、Nginx の場合はキャッシュディレクトリへの
-直接アクセスをブロックする設定を追加する:
+- **Apache**: `.htaccess` で直接アクセスを自動ブロック（プラグインが生成）
+- **クローラー**: `robots.txt` に `Disallow` ルールを自動追加（SEO 重複コンテンツ対策）
+- **Nginx**: `robots.txt` による保護は自動適用される。直接アクセスもブロックしたい場合は以下を任意で追加:
 
-```nginx
-location ~* ^/wp-content/cache/markdown/ {
-    deny all;
-    return 403;
-}
-```
+  ```nginx
+  location ~* ^/wp-content/cache/markdown/ {
+      deny all;
+      return 403;
+  }
+  ```
+
+> **注意**: キャッシュファイルの内容は公開済み投稿の Markdown 変換です。
+> `robots.txt` は主要検索エンジンのクローラーに対して有効ですが、直接アクセスをブロックするものではありません。
 
 ## 動作確認
 
@@ -51,7 +55,17 @@ Cache-Control: public, max-age=3600
 
 ## 設定のカスタマイズ
 
-`wp-config.php` で定数を定義すれば、プラグイン本体を編集せずに設定を変更できる:
+管理画面 **Settings > WP Agent Feed** から以下を設定できる:
+
+- **Content-Signal** — レスポンスに付与する `Content-Signal` ヘッダー値
+- **Post Types** — Markdown 配信対象の投稿タイプ（チェックボックスで選択）
+
+### wp-config.php による上書き
+
+`wp-config.php` で定数を定義すると管理画面の設定より優先される。
+定数が定義されている項目は管理画面上で読み取り専用になる。
+
+設定の優先順位: **wp-config.php 定数 > DB オプション（管理画面） > デフォルト値**
 
 ```php
 // wp-config.php に追記
@@ -66,9 +80,14 @@ define( 'WpAgentFeed\CONTENT_SIGNAL', 'ai-train=yes, search=yes, ai-input=yes' )
 | `WpAgentFeed\POST_TYPES` | 対象の投稿タイプ | `['post', 'page']` |
 | `WpAgentFeed\CONTENT_SIGNAL` | Content-Signal ヘッダー値 | `ai-train=no, search=yes, ai-input=yes` |
 
-## WP-CLI 対応
+## キャッシュ管理
 
-既存記事のキャッシュを一括生成:
+管理画面の設定ページ下部からキャッシュを管理できる:
+
+- **Regenerate All Cache** — 全対象投稿のキャッシュを一括再生成（50件ずつバッチ処理）
+- **Clear All Cache** — 全キャッシュファイルを削除
+
+### WP-CLI
 
 ```bash
 wp markdown-cache regenerate
@@ -82,8 +101,12 @@ wp markdown-cache regenerate
   正しく階層化されない場合がある。単一階層のリスト・引用は正常に変換される。
 - `Content-Signal` のデフォルトは `ai-train=no`（トレーニング不許可）。
   ポリシーに合わせて変更のこと。
-- プラグイン無効化時、`wp-content/cache/markdown/` は自動削除されない。
-  不要であれば手動で削除する。
+- プラグイン**無効化**時、キャッシュディレクトリは削除されない。
+  管理画面から**削除**した場合はキャッシュファイル・DB オプションが自動クリーンアップされる。
+
+## 多言語対応
+
+日本語翻訳ファイル同梱（`languages/`）。WordPress の言語設定に応じて自動適用される。
 
 ## Development
 

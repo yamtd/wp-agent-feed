@@ -11,6 +11,8 @@ use function WpAgentFeed\estimate_tokens;
 use function WpAgentFeed\cache_path;
 use function WpAgentFeed\is_overridden;
 use function WpAgentFeed\clear_all_cache;
+use function WpAgentFeed\robots_disallow_path;
+use function WpAgentFeed\filter_robots_txt;
 use const WpAgentFeed\CACHE_DIR;
 
 /**
@@ -483,5 +485,74 @@ final class FunctionsTest extends TestCase {
 
 		// Restore directory for other tests.
 		mkdir( $original_dir, 0755, true );
+	}
+
+	/* ========================================
+	 * robots_disallow_path() テスト
+	 * ======================================== */
+
+	#[Test]
+	public function robots_disallow_path_standard(): void {
+		$this->assertSame(
+			'/wp-content/cache/markdown/',
+			robots_disallow_path( '/var/www/html/', '/var/www/html/wp-content/cache/markdown/' )
+		);
+	}
+
+	#[Test]
+	public function robots_disallow_path_subdirectory_install(): void {
+		$this->assertSame(
+			'/wp-content/cache/markdown/',
+			robots_disallow_path( '/var/www/html/blog/', '/var/www/html/blog/wp-content/cache/markdown/' )
+		);
+	}
+
+	#[Test]
+	public function robots_disallow_path_outside_abspath(): void {
+		$this->assertSame(
+			'',
+			robots_disallow_path( '/var/www/html/', '/var/cache/markdown/' )
+		);
+	}
+
+	#[Test]
+	public function robots_disallow_path_same_as_abspath(): void {
+		$this->assertSame(
+			'',
+			robots_disallow_path( '/var/www/html/', '/var/www/html/' )
+		);
+	}
+
+	/* ========================================
+	 * filter_robots_txt() テスト
+	 * ======================================== */
+
+	#[Test]
+	public function filter_robots_txt_adds_disallow_rule(): void {
+		$input  = "User-agent: *\nDisallow: /wp-admin/\nAllow: /wp-admin/admin-ajax.php\n";
+		$output = filter_robots_txt( $input, 1 );
+		$this->assertStringContainsString( 'Disallow: /wp-content/cache/markdown/', $output );
+	}
+
+	#[Test]
+	public function filter_robots_txt_skips_duplicate(): void {
+		$input  = "User-agent: *\nDisallow: /wp-content/cache/markdown/\n";
+		$output = filter_robots_txt( $input, 1 );
+		$this->assertSame( 1, substr_count( $output, 'Disallow: /wp-content/cache/markdown/' ) );
+	}
+
+	#[Test]
+	public function filter_robots_txt_distinguishes_similar_path(): void {
+		$input  = "User-agent: *\nDisallow: /wp-content/cache/markdown/sub/\n";
+		$output = filter_robots_txt( $input, 1 );
+		$this->assertStringContainsString( 'Disallow: /wp-content/cache/markdown/sub/', $output );
+		$this->assertStringContainsString( "\nDisallow: /wp-content/cache/markdown/\n", $output );
+	}
+
+	#[Test]
+	public function filter_robots_txt_skips_duplicate_with_crlf(): void {
+		$input  = "User-agent: *\r\nDisallow: /wp-content/cache/markdown/\r\n";
+		$output = filter_robots_txt( $input, 1 );
+		$this->assertSame( 1, substr_count( $output, 'Disallow: /wp-content/cache/markdown/' ) );
 	}
 }

@@ -47,6 +47,8 @@ add_action(
 	}
 );
 
+add_filter( 'robots_txt', __NAMESPACE__ . '\filter_robots_txt', 10, 2 );
+
 /* ========================================
  * 1. 早期インターセプト — Accept ヘッダーの確認とキャッシュ配信
  * ======================================== */
@@ -496,6 +498,46 @@ function is_overridden( $name = '', $mark = false, $reset = false ) {
 	return isset( $overrides[ $name ] );
 }
 
+/**
+ * CACHE_DIR の URL 相対パスを返す。Web 非公開の場合は空文字列。
+ *
+ * @param string $abspath   WordPress ルート絶対パス（末尾スラッシュ付き）。
+ * @param string $cache_dir キャッシュディレクトリ絶対パス。
+ * @return string URL 相対パス（例: /wp-content/cache/markdown/）または空文字列。
+ */
+function robots_disallow_path( $abspath, $cache_dir ) {
+	if ( 0 !== strpos( $cache_dir, $abspath ) ) {
+		return '';
+	}
+	$relative = substr( $cache_dir, strlen( $abspath ) );
+	if ( '' === $relative || false === $relative ) {
+		return '';
+	}
+	return '/' . $relative;
+}
+
+/**
+ * robots.txt に Disallow ルールを追加するフィルターコールバック。
+ *
+ * @param string $output robots.txt の出力文字列。
+ * @param int    $public サイトの公開設定。
+ * @return string フィルター済み出力。
+ */
+function filter_robots_txt( $output, $public ) {
+	$path = robots_disallow_path( ABSPATH, CACHE_DIR );
+	if ( '' === $path ) {
+		return $output;
+	}
+
+	$rule = 'Disallow: ' . $path;
+	if ( preg_match( '/^' . preg_quote( $rule, '/' ) . '\r?$/m', $output ) ) {
+		return $output;
+	}
+
+	$output .= "\n" . $rule . "\n";
+	return $output;
+}
+
 function cache_path( $post_id ) {
 	return CACHE_DIR . intval( $post_id ) . '.md';
 }
@@ -571,6 +613,20 @@ if ( defined( 'WP_CLI' ) && \WP_CLI ) {
  * ======================================== */
 add_action( 'admin_menu', __NAMESPACE__ . '\add_admin_menu' );
 add_action( 'admin_init', __NAMESPACE__ . '\register_settings' );
+add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), __NAMESPACE__ . '\add_settings_link' );
+
+/**
+ * プラグイン一覧に設定ページへのリンクを追加。
+ *
+ * @param array $links Existing action links.
+ * @return array Modified action links.
+ */
+function add_settings_link( $links ) {
+	$url           = admin_url( 'options-general.php?page=wp-agent-feed' );
+	$settings_link = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Settings', 'wp-agent-feed' ) . '</a>';
+	array_unshift( $links, $settings_link );
+	return $links;
+}
 
 /**
  * 管理メニューに設定ページを追加。

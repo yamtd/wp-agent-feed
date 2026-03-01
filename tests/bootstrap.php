@@ -17,7 +17,7 @@ if ( ! defined( 'WP_CONTENT_DIR' ) ) {
 // Plugin constants — define before loading the plugin so
 // the if-not-defined blocks are satisfied.
 if ( ! defined( 'WpAgentFeed\CACHE_DIR' ) ) {
-	define( 'WpAgentFeed\CACHE_DIR', sys_get_temp_dir() . '/waf-test-cache/' );
+	define( 'WpAgentFeed\CACHE_DIR', ABSPATH . 'wp-content/cache/markdown/' );
 }
 if ( ! defined( 'WpAgentFeed\POST_TYPES' ) ) {
 	define( 'WpAgentFeed\POST_TYPES', [ 'post', 'page' ] );
@@ -32,6 +32,12 @@ if ( ! function_exists( 'add_action' ) ) {
 }
 if ( ! function_exists( 'register_uninstall_hook' ) ) {
 	function register_uninstall_hook() {} // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+}
+if ( ! function_exists( 'add_filter' ) ) {
+	function add_filter() {} // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+}
+if ( ! function_exists( 'plugin_basename' ) ) {
+	function plugin_basename( $file ) { return basename( dirname( $file ) ) . '/' . basename( $file ); } // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 }
 if ( ! function_exists( 'get_option' ) ) {
 	function get_option( $option, $default = false ) { return $default; } // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
