@@ -3,7 +3,7 @@
  * Plugin Name: WP Agent Feed
  * Plugin URI: https://github.com/yamtd/wp-agent-feed
  * Description: Accept: text/markdown ヘッダー付きリクエストに対して、投稿コンテンツをMarkdownで返す。保存時に静的キャッシュを生成するパフォーマンス重視設計。
- * Version: 0.3.1
+ * Version: 0.4.0
  * Requires PHP: 7.4
  * Author: Yamada Tadaaki
  * Author URI: https://github.com/yamtd
@@ -38,6 +38,7 @@ if ( ! defined( __NAMESPACE__ . '\CONTENT_SIGNAL' ) ) {
 	define(
 		__NAMESPACE__ . '\CONTENT_SIGNAL',
 		get_option( 'wp_agent_feed_content_signal', 'ai-train=no, search=yes, ai-input=yes' )
+			?: 'ai-train=no, search=yes, ai-input=yes'
 	);
 } else {
 	is_overridden( 'CONTENT_SIGNAL', true );
@@ -77,12 +78,14 @@ function serve_markdown() {
 		return;
 	}
 
-	$post_id    = get_queried_object_id();
-	$cache_path = cache_path( $post_id );
+	$post_id = get_queried_object_id();
 
-	if ( ! file_exists( $cache_path ) ) {
-		generate_cache( $post_id );
+	// パスワード保護記事はMarkdownを返さない（通常のHTML応答にフォールバック）。
+	if ( post_password_required( $post_id ) ) {
+		return;
 	}
+
+	$cache_path = cache_path( $post_id );
 
 	if ( ! file_exists( $cache_path ) ) {
 		return;
@@ -122,7 +125,7 @@ function on_save_post( $post_id, $post ) {
 		return;
 	}
 
-	if ( $post->post_status === 'publish' ) {
+	if ( $post->post_status === 'publish' && '' === $post->post_password ) {
 		generate_cache( $post_id );
 	} else {
 		delete_cache( $post_id );
@@ -138,6 +141,12 @@ add_action( 'deleted_post', __NAMESPACE__ . '\maybe_delete_cache' );
 function generate_cache( $post_id ) {
 	$post = get_post( $post_id );
 	if ( ! $post || $post->post_status !== 'publish' ) {
+		return false;
+	}
+
+	// パスワード保護記事はキャッシュを生成しない。
+	if ( '' !== $post->post_password ) {
+		delete_cache( $post_id );
 		return false;
 	}
 
@@ -178,27 +187,33 @@ function generate_cache( $post_id ) {
  * @return bool ディレクトリが利用可能なら true。
  */
 function initialize_cache_dir() {
-	if ( is_dir( CACHE_DIR ) ) {
-		return true;
-	}
-
-	wp_mkdir_p( CACHE_DIR );
-
 	if ( ! is_dir( CACHE_DIR ) ) {
-		// translators: %s is the cache directory path.
-		error_log( sprintf( 'WP Agent Feed: Failed to create cache directory %s', CACHE_DIR ) );
-		return false;
+		wp_mkdir_p( CACHE_DIR );
+
+		if ( ! is_dir( CACHE_DIR ) ) {
+			// translators: %s is the cache directory path.
+			error_log( sprintf( 'WP Agent Feed: Failed to create cache directory %s', CACHE_DIR ) );
+			return false;
+		}
 	}
 
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-	if ( false === file_put_contents( CACHE_DIR . '.htaccess', "# Apache 2.4+\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n\n# Apache 2.2\n<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n" ) ) {
-		// translators: %s is the cache directory path.
-		error_log( sprintf( 'WP Agent Feed: Failed to create .htaccess in %s', CACHE_DIR ) );
+	// ディレクトリが既存でも保護ファイルが不足していれば生成する。
+	$htaccess = CACHE_DIR . '.htaccess';
+	if ( ! file_exists( $htaccess ) ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		if ( false === file_put_contents( $htaccess, "# Apache 2.4+\n<IfModule mod_authz_core.c>\n\tRequire all denied\n</IfModule>\n\n# Apache 2.2\n<IfModule !mod_authz_core.c>\n\tDeny from all\n</IfModule>\n" ) ) {
+			// translators: %s is the cache directory path.
+			error_log( sprintf( 'WP Agent Feed: Failed to create .htaccess in %s', CACHE_DIR ) );
+		}
 	}
-	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-	if ( false === file_put_contents( CACHE_DIR . 'index.html', '' ) ) {
-		// translators: %s is the cache directory path.
-		error_log( sprintf( 'WP Agent Feed: Failed to create index.html in %s', CACHE_DIR ) );
+
+	$index = CACHE_DIR . 'index.html';
+	if ( ! file_exists( $index ) ) {
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+		if ( false === file_put_contents( $index, '' ) ) {
+			// translators: %s is the cache directory path.
+			error_log( sprintf( 'WP Agent Feed: Failed to create index.html in %s', CACHE_DIR ) );
+		}
 	}
 
 	return true;
@@ -437,6 +452,7 @@ if ( defined( 'WP_CLI' ) && \WP_CLI ) {
 				[
 					'post_type'      => POST_TYPES,
 					'post_status'    => 'publish',
+					'has_password'   => false,
 					'posts_per_page' => -1,
 					'fields'         => 'ids',
 				]

@@ -16,6 +16,25 @@ defined( 'ABSPATH' ) || exit;
  * ======================================== */
 add_action( 'admin_menu', __NAMESPACE__ . '\add_admin_menu' );
 add_action( 'admin_init', __NAMESPACE__ . '\register_settings' );
+add_action( 'admin_enqueue_scripts', __NAMESPACE__ . '\enqueue_admin_assets' );
+
+/**
+ * 設定ページでのみ管理画面用 CSS を読み込み。
+ *
+ * @param string $hook_suffix 現在の管理ページのフックサフィックス。
+ */
+function enqueue_admin_assets( $hook_suffix ) {
+	if ( 'settings_page_wp-agent-feed' !== $hook_suffix ) {
+		return;
+	}
+	$css_file = dirname( __DIR__ ) . '/assets/admin.css';
+	wp_enqueue_style(
+		'wp-agent-feed-admin',
+		plugin_dir_url( __DIR__ ) . 'assets/admin.css',
+		array(),
+		file_exists( $css_file ) ? (string) filemtime( $css_file ) : '1'
+	);
+}
 
 /**
  * 管理メニューに設定ページを追加。
@@ -114,7 +133,11 @@ function register_settings() {
  * @return string Sanitized value.
  */
 function sanitize_content_signal( $value ) {
-	return sanitize_text_field( $value );
+	$value = sanitize_text_field( $value );
+	if ( '' === $value ) {
+		return 'ai-train=no, search=yes, ai-input=yes';
+	}
+	return $value;
 }
 
 /**
@@ -155,7 +178,13 @@ function sanitize_post_types( $value ) {
 function render_section_general() {
 	echo '<p>';
 	esc_html_e(
-		'Configure how WP Agent Feed serves Markdown responses. Settings defined as constants in wp-config.php take priority over these values.',
+		'Configure how your content is served to AI agents and search tools that request Markdown format.',
+		'wp-agent-feed'
+	);
+	echo '</p>';
+	echo '<p class="description">';
+	esc_html_e(
+		'Advanced: Settings defined as constants in wp-config.php take priority over these values.',
 		'wp-agent-feed'
 	);
 	echo '</p>';
@@ -176,14 +205,46 @@ function render_field_content_signal() {
 		return;
 	}
 
-	$value = get_option( 'wp_agent_feed_content_signal', 'ai-train=no, search=yes, ai-input=yes' );
+	$default = 'ai-train=no, search=yes, ai-input=yes';
+	$value   = get_option( 'wp_agent_feed_content_signal', $default );
 	printf(
 		'<input type="text" id="wp_agent_feed_content_signal" name="wp_agent_feed_content_signal" value="%s" class="regular-text" />',
 		esc_attr( $value )
 	);
+	printf(
+		' <button type="button" class="use-recommended" data-target="wp_agent_feed_content_signal" data-value="%s">%s</button>',
+		esc_attr( $default ),
+		esc_html__( 'Use recommended', 'wp-agent-feed' )
+	);
 	echo '<p class="description">';
-	esc_html_e( 'The Content-Signal header value sent with Markdown responses.', 'wp-agent-feed' );
+	esc_html_e(
+		'This HTTP header signals your preferences for how AI agents may use your content. Compliance is voluntary, similar to robots.txt.',
+		'wp-agent-feed'
+	);
+	echo '<br>';
+	printf(
+		/* translators: %s is the default value */
+		esc_html__( 'Default: %s', 'wp-agent-feed' ),
+		'<code>' . esc_html( $default ) . '</code>'
+	);
 	echo '</p>';
+	echo '<details class="directive-ref">';
+	printf( '<summary>%s</summary>', esc_html__( 'What each value means', 'wp-agent-feed' ) );
+	echo '<table class="directive-table"><tbody>';
+	printf(
+		'<tr><td><code>ai-train=no</code></td><td>%s</td></tr>',
+		esc_html__( 'Request no AI training', 'wp-agent-feed' )
+	);
+	printf(
+		'<tr><td><code>search=yes</code></td><td>%s</td></tr>',
+		esc_html__( 'Search indexing acceptable', 'wp-agent-feed' )
+	);
+	printf(
+		'<tr><td><code>ai-input=yes</code></td><td>%s</td></tr>',
+		esc_html__( 'AI assistant reference acceptable', 'wp-agent-feed' )
+	);
+	echo '</tbody></table>';
+	echo '</details>';
 }
 
 /**
@@ -201,14 +262,46 @@ function render_field_cache_control() {
 		return;
 	}
 
-	$value = get_option( 'wp_agent_feed_cache_control', 'public, max-age=3600' );
+	$recommended = 'public, max-age=3600';
+	$value       = get_option( 'wp_agent_feed_cache_control', $recommended );
 	printf(
 		'<input type="text" id="wp_agent_feed_cache_control" name="wp_agent_feed_cache_control" value="%s" class="regular-text" />',
 		esc_attr( $value )
 	);
+	printf(
+		' <button type="button" class="use-recommended" data-target="wp_agent_feed_cache_control" data-value="%s">%s</button>',
+		esc_attr( $recommended ),
+		esc_html__( 'Use recommended', 'wp-agent-feed' )
+	);
 	echo '<p class="description">';
-	esc_html_e( 'The Cache-Control header value sent with Markdown responses. Leave empty to not send this header.', 'wp-agent-feed' );
+	esc_html_e(
+		'Controls how long browsers and CDNs may cache the Markdown response. Leave empty to let the server decide.',
+		'wp-agent-feed'
+	);
+	echo '<br>';
+	printf(
+		/* translators: %s is the recommended value */
+		esc_html__( 'Recommended: %s', 'wp-agent-feed' ),
+		'<code>' . esc_html( $recommended ) . '</code>'
+	);
 	echo '</p>';
+	echo '<details class="directive-ref">';
+	printf( '<summary>%s</summary>', esc_html__( 'What each value means', 'wp-agent-feed' ) );
+	echo '<table class="directive-table"><tbody>';
+	printf(
+		'<tr><td><code>public</code></td><td>%s</td></tr>',
+		esc_html__( 'Allow CDN and proxy caches', 'wp-agent-feed' )
+	);
+	printf(
+		'<tr><td><code>private</code></td><td>%s</td></tr>',
+		esc_html__( 'Browser cache only (no CDN)', 'wp-agent-feed' )
+	);
+	printf(
+		'<tr><td><code>max-age</code></td><td>%s</td></tr>',
+		esc_html__( 'Cache duration in seconds (3600 = 1 hour)', 'wp-agent-feed' )
+	);
+	echo '</tbody></table>';
+	echo '</details>';
 }
 
 /**
@@ -235,13 +328,20 @@ function render_field_post_types() {
 
 	foreach ( $post_types as $pt ) {
 		printf(
-			'<label style="display: block; margin-bottom: 4px;"><input type="checkbox" name="wp_agent_feed_post_types[]" value="%s" %s /> %s (<code>%s</code>)</label>',
+			'<label class="post-type-label"><input type="checkbox" name="wp_agent_feed_post_types[]" value="%s" %s /> %s (<code>%s</code>)</label>',
 			esc_attr( $pt->name ),
 			checked( in_array( $pt->name, $current, true ), true, false ),
 			esc_html( $pt->labels->name ),
 			esc_html( $pt->name )
 		);
 	}
+
+	echo '<p class="description">';
+	esc_html_e(
+		'Select which post types are available as Markdown for AI agents and search tools. Only published content of the selected types will be served.',
+		'wp-agent-feed'
+	);
+	echo '</p>';
 }
 
 /**
@@ -271,96 +371,167 @@ function get_diagnostics_data() {
 }
 
 /**
- * ステータス & 診断パネルの HTML を描画。
+ * 診断データからステータス行の表示状態を導出。
+ *
+ * JS 側にロジックを複製しないよう、PHP で判定・翻訳まで完了した状態を返す。
+ *
+ * @param array $data get_diagnostics_data() の返り値。
+ * @return array[] 各行の { id, icon, css_class, text }。
  */
-function render_status_panel() {
-	$data = get_diagnostics_data();
+function build_status_rows( $data ) {
+	$rows = array();
 
-	// Cache directory status.
+	// Cache directory.
 	if ( $data['cache_dir_writable'] ) {
-		$dir_icon  = 'dashicons-yes-alt';
-		$dir_color = '#00a32a';
-		$dir_text  = __( 'Writable', 'wp-agent-feed' );
+		$rows[] = array(
+			'id'        => 'dir',
+			'icon'      => 'dashicons-yes-alt',
+			'css_class' => 'status-ok',
+			'text'      => __( 'Writable', 'wp-agent-feed' ),
+		);
 	} elseif ( $data['cache_dir_exists'] ) {
-		$dir_icon  = 'dashicons-dismiss';
-		$dir_color = '#d63638';
-		$dir_text  = __( 'Not writable', 'wp-agent-feed' );
+		$rows[] = array(
+			'id'        => 'dir',
+			'icon'      => 'dashicons-dismiss',
+			'css_class' => 'status-error',
+			'text'      => __( 'Not writable', 'wp-agent-feed' ),
+		);
 	} else {
-		$dir_icon  = 'dashicons-dismiss';
-		$dir_color = '#d63638';
-		$dir_text  = __( 'Does not exist', 'wp-agent-feed' );
+		$rows[] = array(
+			'id'        => 'dir',
+			'icon'      => 'dashicons-dismiss',
+			'css_class' => 'status-error',
+			'text'      => __( 'Does not exist', 'wp-agent-feed' ),
+		);
 	}
 
-	// .htaccess status.
+	// .htaccess.
 	if ( $data['htaccess_exists'] ) {
-		$ht_icon  = 'dashicons-yes-alt';
-		$ht_color = '#00a32a';
-		$ht_text  = __( 'Present', 'wp-agent-feed' );
+		$rows[] = array(
+			'id'        => 'ht',
+			'icon'      => 'dashicons-yes-alt',
+			'css_class' => 'status-ok',
+			'text'      => __( 'Present', 'wp-agent-feed' ),
+		);
 	} else {
-		$ht_icon  = 'dashicons-dismiss';
-		$ht_color = '#d63638';
-		$ht_text  = __( 'Missing', 'wp-agent-feed' );
+		$rows[] = array(
+			'id'        => 'ht',
+			'icon'      => 'dashicons-dismiss',
+			'css_class' => 'status-error',
+			'text'      => __( 'Missing', 'wp-agent-feed' ),
+		);
 	}
 
-	// Cache coverage status.
+	// Cache coverage.
 	$cached = $data['cached_count'];
 	$total  = $data['total_count'];
 
 	if ( 0 === $total ) {
-		$cov_icon  = 'dashicons-minus';
-		$cov_color = '#787c82';
-		$cov_text  = __( 'No published posts', 'wp-agent-feed' );
+		$rows[] = array(
+			'id'        => 'cov',
+			'icon'      => 'dashicons-minus',
+			'css_class' => 'status-neutral',
+			'text'      => __( 'No published posts', 'wp-agent-feed' ),
+		);
 	} elseif ( $cached >= $total ) {
-		$cov_icon  = 'dashicons-yes-alt';
-		$cov_color = '#00a32a';
-		/* translators: 1: cached count, 2: total count */
-		$cov_text = sprintf( __( '%1$d / %2$d posts cached', 'wp-agent-feed' ), min( $cached, $total ), $total );
+		$rows[] = array(
+			'id'        => 'cov',
+			'icon'      => 'dashicons-yes-alt',
+			'css_class' => 'status-ok',
+			/* translators: 1: cached count, 2: total count */
+			'text'      => sprintf( __( '%1$d / %2$d posts cached', 'wp-agent-feed' ), min( $cached, $total ), $total ),
+		);
 	} elseif ( $cached > 0 ) {
-		$cov_icon  = 'dashicons-warning';
-		$cov_color = '#dba617';
-		/* translators: 1: cached count, 2: total count */
-		$cov_text = sprintf( __( '%1$d / %2$d posts cached', 'wp-agent-feed' ), $cached, $total );
+		$rows[] = array(
+			'id'        => 'cov',
+			'icon'      => 'dashicons-warning',
+			'css_class' => 'status-warn',
+			/* translators: 1: cached count, 2: total count */
+			'text'      => sprintf( __( '%1$d / %2$d posts cached', 'wp-agent-feed' ), $cached, $total ),
+		);
 	} else {
-		$cov_icon  = 'dashicons-dismiss';
-		$cov_color = '#d63638';
-		/* translators: 1: cached count, 2: total count */
-		$cov_text = sprintf( __( '%1$d / %2$d posts cached', 'wp-agent-feed' ), $cached, $total );
+		$rows[] = array(
+			'id'        => 'cov',
+			'icon'      => 'dashicons-dismiss',
+			'css_class' => 'status-error',
+			/* translators: 1: cached count, 2: total count */
+			'text'      => sprintf( __( '%1$d / %2$d posts cached', 'wp-agent-feed' ), $cached, $total ),
+		);
 	}
+
+	return $rows;
+}
+
+/**
+ * キャッシュ管理セクションの HTML を描画。
+ *
+ * Settings タブ内でフォームの後に配置される。
+ */
+function render_cache_section() {
+	?>
+	<h2><?php esc_html_e( 'Cache Management', 'wp-agent-feed' ); ?></h2>
+	<p>
+		<?php
+		printf(
+			/* translators: %s is the cache directory path */
+			esc_html__( 'Cache directory: %s', 'wp-agent-feed' ),
+			'<code>' . esc_html( CACHE_DIR ) . '</code>'
+		);
+		?>
+	</p>
+	<p>
+		<button type="button" class="button button-primary" id="wp-agent-feed-regenerate">
+			<?php esc_html_e( 'Regenerate All Cache', 'wp-agent-feed' ); ?>
+		</button>
+		<button type="button" class="button" id="wp-agent-feed-clear">
+			<?php esc_html_e( 'Clear All Cache', 'wp-agent-feed' ); ?>
+		</button>
+		<span id="wp-agent-feed-status" class="inline-status"></span>
+	</p>
+	<?php
+}
+
+/**
+ * 診断パネルの HTML を描画。
+ *
+ * ステータステーブル + 出力検証 + ヘッダー確認。
+ */
+function render_diagnostics_panel() {
+	$data = get_diagnostics_data();
+
+	$rows   = build_status_rows( $data );
+	$labels = array(
+		'dir' => __( 'Cache directory', 'wp-agent-feed' ),
+		'ht'  => __( '.htaccess protection', 'wp-agent-feed' ),
+		'cov' => __( 'Cache coverage', 'wp-agent-feed' ),
+	);
 	?>
 	<h2><?php esc_html_e( 'Status', 'wp-agent-feed' ); ?></h2>
-	<table class="widefat striped" style="max-width: 600px;">
+	<table class="widefat striped status-table">
 		<tbody>
+			<?php foreach ( $rows as $row ) : ?>
 			<tr>
-				<td style="width: 24px;"><span class="dashicons <?php echo esc_attr( $dir_icon ); ?>" style="color: <?php echo esc_attr( $dir_color ); ?>;"></span></td>
-				<td><?php esc_html_e( 'Cache directory', 'wp-agent-feed' ); ?></td>
-				<td><?php echo esc_html( $dir_text ); ?></td>
+				<td class="status-icon"><span id="agfd-status-<?php echo esc_attr( $row['id'] ); ?>-icon" class="dashicons <?php echo esc_attr( $row['icon'] ); ?> <?php echo esc_attr( $row['css_class'] ); ?>"></span></td>
+				<td><?php echo esc_html( $labels[ $row['id'] ] ); ?></td>
+				<td id="agfd-status-<?php echo esc_attr( $row['id'] ); ?>-text"><?php echo esc_html( $row['text'] ); ?></td>
 			</tr>
-			<tr>
-				<td><span class="dashicons <?php echo esc_attr( $ht_icon ); ?>" style="color: <?php echo esc_attr( $ht_color ); ?>;"></span></td>
-				<td><?php esc_html_e( '.htaccess protection', 'wp-agent-feed' ); ?></td>
-				<td><?php echo esc_html( $ht_text ); ?></td>
-			</tr>
-			<tr>
-				<td><span class="dashicons <?php echo esc_attr( $cov_icon ); ?>" style="color: <?php echo esc_attr( $cov_color ); ?>;"></span></td>
-				<td><?php esc_html_e( 'Cache coverage', 'wp-agent-feed' ); ?></td>
-				<td><?php echo esc_html( $cov_text ); ?></td>
-			</tr>
+			<?php endforeach; ?>
 		</tbody>
 	</table>
-	<p style="margin-top: 12px;">
+	<p class="button-group">
 		<button type="button" class="button" id="wp-agent-feed-live-test">
 			<?php esc_html_e( 'Verify Output', 'wp-agent-feed' ); ?>
 		</button>
-		<span id="wp-agent-feed-live-test-status" style="margin-left: 8px;"></span>
+		<span id="wp-agent-feed-live-test-status" class="inline-status"></span>
 	</p>
-	<div id="wp-agent-feed-live-test-result" style="display: none; margin-top: 12px;"></div>
-	<p style="margin-top: 12px;">
+	<div id="wp-agent-feed-live-test-result" class="result-panel"></div>
+	<p class="button-group">
 		<button type="button" class="button" id="wp-agent-feed-check-headers">
 			<?php esc_html_e( 'Check HTTP Headers', 'wp-agent-feed' ); ?>
 		</button>
-		<span id="wp-agent-feed-check-headers-status" style="margin-left: 8px;"></span>
+		<span id="wp-agent-feed-check-headers-status" class="inline-status"></span>
 	</p>
-	<div id="wp-agent-feed-check-headers-result" style="display: none; margin-top: 12px;"></div>
+	<div id="wp-agent-feed-check-headers-result" class="result-panel"></div>
 	<?php
 }
 
@@ -374,49 +545,37 @@ function render_settings_page() {
 
 	$all_overridden = is_overridden( 'CONTENT_SIGNAL' ) && is_overridden( 'POST_TYPES' ) && is_overridden( 'CACHE_CONTROL' );
 	?>
-	<div class="wrap">
+	<div class="wrap agfd-settings">
 		<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
-		<?php render_status_panel(); ?>
+		<div class="tabs">
+			<input type="radio" name="agfd-tab" id="agfd-tab-settings" checked class="tab-radio" />
+			<label for="agfd-tab-settings" class="tab-label"><?php esc_html_e( 'Settings', 'wp-agent-feed' ); ?></label>
 
-		<hr />
+			<input type="radio" name="agfd-tab" id="agfd-tab-diagnostics" class="tab-radio" />
+			<label for="agfd-tab-diagnostics" class="tab-label"><?php esc_html_e( 'Diagnostics', 'wp-agent-feed' ); ?></label>
 
-		<?php if ( $all_overridden ) : ?>
-			<?php do_settings_sections( 'wp-agent-feed' ); ?>
-		<?php else : ?>
-			<form method="post" action="options.php">
-				<?php
-				settings_fields( 'wp_agent_feed_settings' );
-				do_settings_sections( 'wp-agent-feed' );
-				submit_button();
-				?>
-			</form>
-		<?php endif; ?>
+			<div class="tab-panel panel-settings">
+				<?php if ( $all_overridden ) : ?>
+					<?php do_settings_sections( 'wp-agent-feed' ); ?>
+				<?php else : ?>
+					<form method="post" action="options.php">
+						<?php
+						settings_fields( 'wp_agent_feed_settings' );
+						do_settings_sections( 'wp-agent-feed' );
+						submit_button();
+						?>
+					</form>
+				<?php endif; ?>
+				<?php render_cache_section(); ?>
+			</div>
 
-		<hr />
+			<div class="tab-panel panel-diagnostics">
+				<?php render_diagnostics_panel(); ?>
+			</div>
+		</div>
 
-		<h2><?php esc_html_e( 'Cache Management', 'wp-agent-feed' ); ?></h2>
-		<p>
-			<?php
-			printf(
-				/* translators: %s is the cache directory path */
-				esc_html__( 'Cache directory: %s', 'wp-agent-feed' ),
-				'<code>' . esc_html( CACHE_DIR ) . '</code>'
-			);
-			?>
-		</p>
-		<p>
-			<button type="button" class="button button-primary" id="wp-agent-feed-regenerate">
-				<?php esc_html_e( 'Regenerate All Cache', 'wp-agent-feed' ); ?>
-			</button>
-			<button type="button" class="button" id="wp-agent-feed-clear">
-				<?php esc_html_e( 'Clear All Cache', 'wp-agent-feed' ); ?>
-			</button>
-			<span id="wp-agent-feed-status" style="margin-left: 8px;"></span>
-		</p>
-
-		<?php render_cache_management_script(); ?>
-		<?php render_diagnostics_script(); ?>
+		<?php render_admin_script(); ?>
 	</div>
 	<?php
 }
@@ -428,6 +587,7 @@ add_action( 'wp_ajax_wp_agent_feed_regenerate', __NAMESPACE__ . '\ajax_regenerat
 add_action( 'wp_ajax_wp_agent_feed_clear', __NAMESPACE__ . '\ajax_clear' );
 add_action( 'wp_ajax_wp_agent_feed_live_test', __NAMESPACE__ . '\ajax_live_test' );
 add_action( 'wp_ajax_wp_agent_feed_check_headers', __NAMESPACE__ . '\ajax_check_headers' );
+add_action( 'wp_ajax_wp_agent_feed_diagnostics', __NAMESPACE__ . '\ajax_diagnostics' );
 
 /**
  * AJAX: キャッシュ一括再生成（バッチ処理）。
@@ -447,6 +607,7 @@ function ajax_regenerate() {
 			array(
 				'post_type'      => POST_TYPES,
 				'post_status'    => 'publish',
+				'has_password'   => false,
 				'posts_per_page' => -1,
 				'fields'         => 'ids',
 				'orderby'        => 'ID',
@@ -692,9 +853,25 @@ function ajax_check_headers() {
 }
 
 /**
- * キャッシュ管理ボタンの JavaScript を出力。
+ * AJAX: ステータスパネル診断データ取得。
  */
-function render_cache_management_script() {
+function ajax_diagnostics() {
+	check_ajax_referer( 'wp_agent_feed_cache' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( __( 'Permission denied.', 'wp-agent-feed' ), 403 );
+	}
+
+	$data = get_diagnostics_data();
+	$rows = build_status_rows( $data );
+
+	wp_send_json_success( array( 'rows' => $rows ) );
+}
+
+/**
+ * 管理画面の JavaScript を出力（キャッシュ管理 + 診断 + ステータス更新）。
+ */
+function render_admin_script() {
 	$nonce = wp_create_nonce( 'wp_agent_feed_cache' );
 	?>
 	<script>
@@ -702,14 +879,8 @@ function render_cache_management_script() {
 	(function() {
 		var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
 		var nonce   = <?php echo wp_json_encode( $nonce ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
-		var status  = document.getElementById('wp-agent-feed-status');
-		var btnRegen = document.getElementById('wp-agent-feed-regenerate');
-		var btnClear = document.getElementById('wp-agent-feed-clear');
 
-		function setButtons(disabled) {
-			btnRegen.disabled = disabled;
-			btnClear.disabled = disabled;
-		}
+		/* --- Shared utilities --- */
 
 		function doPost(params) {
 			var data = new FormData();
@@ -719,6 +890,61 @@ function render_cache_management_script() {
 			}
 			return fetch(ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' })
 				.then(function(r) { return r.json(); });
+		}
+
+		function escHtml(str) {
+			var div = document.createElement('div');
+			div.appendChild(document.createTextNode(str));
+			return div.innerHTML;
+		}
+
+		function refreshStatus() {
+			doPost({ action: 'wp_agent_feed_diagnostics' }).then(function(json) {
+				if (!json.success) { return; }
+				json.data.rows.forEach(function(row) {
+					var icon = document.getElementById('agfd-status-' + row.id + '-icon');
+					var text = document.getElementById('agfd-status-' + row.id + '-text');
+					if (icon) {
+						icon.className = 'dashicons ' + row.icon + ' ' + row.css_class;
+					}
+					if (text) {
+						text.textContent = row.text;
+					}
+				});
+			});
+		}
+
+		/* --- "Use recommended" buttons --- */
+
+		document.querySelectorAll('.use-recommended').forEach(function(btn) {
+			btn.addEventListener('click', function() {
+				var input = document.getElementById(this.dataset.target);
+				if (input) {
+					input.value = this.dataset.value;
+					input.dispatchEvent(new Event('change', { bubbles: true }));
+				}
+			});
+		});
+
+		/* --- Dirty form detection --- */
+
+		var settingsForm = document.querySelector('.panel-settings form');
+		var dirty = false;
+		var unsavedMsg = '<?php echo esc_js( __( 'You have unsaved setting changes. Save changes before regenerating cache.', 'wp-agent-feed' ) ); ?>';
+		if (settingsForm) {
+			settingsForm.addEventListener('change', function() { dirty = true; });
+			settingsForm.addEventListener('submit', function() { dirty = false; });
+		}
+
+		/* --- Cache management --- */
+
+		var status   = document.getElementById('wp-agent-feed-status');
+		var btnRegen = document.getElementById('wp-agent-feed-regenerate');
+		var btnClear = document.getElementById('wp-agent-feed-clear');
+
+		function setButtons(disabled) {
+			btnRegen.disabled = disabled;
+			btnClear.disabled = disabled;
 		}
 
 		function regenerate(retries) {
@@ -770,6 +996,7 @@ function render_cache_management_script() {
 						status.textContent = total + ' <?php echo esc_js( __( 'cache files regenerated.', 'wp-agent-feed' ) ); ?>';
 					}
 					setButtons(false);
+					refreshStatus();
 				} else {
 					processBatch(batchId, total, page + 1, 0, retries, newTotalFailed);
 				}
@@ -779,9 +1006,13 @@ function render_cache_management_script() {
 			});
 		}
 
-		btnRegen.addEventListener('click', function() { regenerate(0); });
+		btnRegen.addEventListener('click', function() {
+			if (dirty && !confirm(unsavedMsg)) { return; }
+			regenerate(0);
+		});
 
 		btnClear.addEventListener('click', function() {
+			if (dirty && !confirm(unsavedMsg)) { return; }
 			if (!confirm('<?php echo esc_js( __( 'Are you sure you want to clear all cache files?', 'wp-agent-feed' ) ); ?>')) {
 				return;
 			}
@@ -791,77 +1022,53 @@ function render_cache_management_script() {
 			doPost({ action: 'wp_agent_feed_clear' }).then(function(json) {
 				status.textContent = json.success ? json.data.message : (json.data || 'Error');
 				setButtons(false);
+				refreshStatus();
 			}).catch(function() {
 				status.textContent = '<?php echo esc_js( __( 'Request failed.', 'wp-agent-feed' ) ); ?>';
 				setButtons(false);
 			});
 		});
-	})();
-	/* ]]> */
-	</script>
-	<?php
-}
 
-/**
- * ライブテストボタンの JavaScript を出力。
- */
-function render_diagnostics_script() {
-	$nonce = wp_create_nonce( 'wp_agent_feed_cache' );
-	?>
-	<script>
-	/* <![CDATA[ */
-	(function() {
-		var ajaxUrl  = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
-		var nonce    = <?php echo wp_json_encode( $nonce ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
-		var btn      = document.getElementById('wp-agent-feed-live-test');
-		var statusEl = document.getElementById('wp-agent-feed-live-test-status');
-		var resultEl = document.getElementById('wp-agent-feed-live-test-result');
+		/* --- Verify Output --- */
 
-		if (!btn) { return; }
+		var testBtn      = document.getElementById('wp-agent-feed-live-test');
+		var testStatusEl = document.getElementById('wp-agent-feed-live-test-status');
+		var testResultEl = document.getElementById('wp-agent-feed-live-test-result');
 
-		function escHtml(str) {
-			var div = document.createElement('div');
-			div.appendChild(document.createTextNode(str));
-			return div.innerHTML;
+		if (testBtn) {
+			testBtn.addEventListener('click', function() {
+				testBtn.disabled = true;
+				testStatusEl.textContent = '<?php echo esc_js( __( 'Verifying...', 'wp-agent-feed' ) ); ?>';
+				testResultEl.style.display = 'none';
+				testResultEl.innerHTML = '';
+
+				doPost({ action: 'wp_agent_feed_live_test' })
+					.then(function(json) {
+						testBtn.disabled = false;
+						testStatusEl.textContent = '';
+
+						if (!json.success) {
+							renderTestError(json.data);
+							return;
+						}
+						renderTestResult(json.data);
+						refreshStatus();
+					})
+					.catch(function() {
+						testBtn.disabled = false;
+						testStatusEl.textContent = '';
+						renderTestError({ message: '<?php echo esc_js( __( 'Request failed.', 'wp-agent-feed' ) ); ?>' });
+					});
+			});
 		}
 
-		btn.addEventListener('click', function() {
-			btn.disabled = true;
-			statusEl.textContent = '<?php echo esc_js( __( 'Verifying...', 'wp-agent-feed' ) ); ?>';
-			resultEl.style.display = 'none';
-			resultEl.innerHTML = '';
-
-			var data = new FormData();
-			data.append('action', 'wp_agent_feed_live_test');
-			data.append('_ajax_nonce', nonce);
-
-			fetch(ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' })
-				.then(function(r) { return r.json(); })
-				.then(function(json) {
-					btn.disabled = false;
-					statusEl.textContent = '';
-
-					if (!json.success) {
-						renderError(json.data);
-						return;
-					}
-					renderResult(json.data);
-				})
-				.catch(function() {
-					btn.disabled = false;
-					statusEl.textContent = '';
-					renderError({ message: '<?php echo esc_js( __( 'Request failed.', 'wp-agent-feed' ) ); ?>' });
-				});
-		});
-
-		function renderError(data) {
+		function renderTestError(data) {
 			var msg = (data && data.message) ? data.message : (data || 'Unknown error');
-			var html = '<div class="notice notice-error inline"><p>' + escHtml(msg) + '</p></div>';
-			resultEl.innerHTML = html;
-			resultEl.style.display = 'block';
+			testResultEl.innerHTML = '<div class="notice notice-error inline"><p>' + escHtml(msg) + '</p></div>';
+			testResultEl.style.display = 'block';
 		}
 
-		function renderResult(data) {
+		function renderTestResult(data) {
 			var noticeClass = data.pass ? 'notice-success' : 'notice-error';
 			var summaryText = data.pass
 				? '<?php echo esc_js( __( 'All checks passed. Markdown output is correct.', 'wp-agent-feed' ) ); ?>'
@@ -873,8 +1080,8 @@ function render_diagnostics_script() {
 			html += '<p>' + escHtml('<?php echo esc_js( __( 'Tested post:', 'wp-agent-feed' ) ); ?>') +
 				' ' + escHtml(data.title) + ' <code>#' + data.post_id + '</code></p>';
 
-			html += '<table class="widefat striped" style="max-width:700px">';
-			html += '<thead><tr><th style="width:24px"></th>';
+			html += '<table class="widefat striped check-table">';
+			html += '<thead><tr><th class="status-icon"></th>';
 			html += '<th>' + escHtml('<?php echo esc_js( __( 'Check', 'wp-agent-feed' ) ); ?>') + '</th>';
 			html += '<th>' + escHtml('<?php echo esc_js( __( 'Expected', 'wp-agent-feed' ) ); ?>') + '</th>';
 			html += '<th>' + escHtml('<?php echo esc_js( __( 'Actual', 'wp-agent-feed' ) ); ?>') + '</th>';
@@ -883,9 +1090,9 @@ function render_diagnostics_script() {
 			for (var i = 0; i < data.checks.length; i++) {
 				var c = data.checks[i];
 				var icon = c.pass
-					? '<span class="dashicons dashicons-yes-alt" style="color:#00a32a"></span>'
-					: '<span class="dashicons dashicons-dismiss" style="color:#d63638"></span>';
-				html += '<tr><td>' + icon + '</td>';
+					? '<span class="dashicons dashicons-yes-alt status-ok"></span>'
+					: '<span class="dashicons dashicons-dismiss status-error"></span>';
+				html += '<tr><td class="status-icon">' + icon + '</td>';
 				html += '<td>' + escHtml(c.name) + '</td>';
 				html += '<td>' + escHtml(c.expect) + '</td>';
 				html += '<td><code>' + escHtml(c.actual) + '</code></td></tr>';
@@ -893,8 +1100,8 @@ function render_diagnostics_script() {
 			html += '</tbody></table>';
 
 			if (data.headers || data.preview) {
-				html += '<details style="margin-top:12px">';
-				html += '<summary style="cursor:pointer">' + escHtml('<?php echo esc_js( __( 'Response Preview', 'wp-agent-feed' ) ); ?>') + '</summary>';
+				html += '<details class="response-details">';
+				html += '<summary>' + escHtml('<?php echo esc_js( __( 'Response Preview', 'wp-agent-feed' ) ); ?>') + '</summary>';
 				var pre = '';
 				if (data.headers) {
 					for (var h in data.headers) {
@@ -907,15 +1114,15 @@ function render_diagnostics_script() {
 				if (data.preview) {
 					pre += data.preview;
 				}
-				html += '<pre style="background:#f0f0f1;padding:12px;overflow:auto;max-height:300px;margin-top:8px"><code>' +
-					escHtml(pre) + '</code></pre></details>';
+				html += '<pre class="code-preview"><code>' + escHtml(pre) + '</code></pre></details>';
 			}
 
-			resultEl.innerHTML = html;
-			resultEl.style.display = 'block';
+			testResultEl.innerHTML = html;
+			testResultEl.style.display = 'block';
 		}
 
 		/* --- Check HTTP Headers --- */
+
 		var hdrBtn      = document.getElementById('wp-agent-feed-check-headers');
 		var hdrStatusEl = document.getElementById('wp-agent-feed-check-headers-status');
 		var hdrResultEl = document.getElementById('wp-agent-feed-check-headers-result');
@@ -927,12 +1134,7 @@ function render_diagnostics_script() {
 				hdrResultEl.style.display = 'none';
 				hdrResultEl.innerHTML = '';
 
-				var hdrData = new FormData();
-				hdrData.append('action', 'wp_agent_feed_check_headers');
-				hdrData.append('_ajax_nonce', nonce);
-
-				fetch(ajaxUrl, { method: 'POST', body: hdrData, credentials: 'same-origin' })
-					.then(function(r) { return r.json(); })
+				doPost({ action: 'wp_agent_feed_check_headers' })
 					.then(function(json) {
 						hdrBtn.disabled = false;
 						hdrStatusEl.textContent = '';
@@ -961,9 +1163,9 @@ function render_diagnostics_script() {
 						}
 
 						if (d.raw_headers && d.raw_headers.length) {
-							html += '<pre style="background:#f0f0f1;padding:12px;overflow:auto;max-height:300px;margin-top:8px"><code>';
-							for (var i = 0; i < d.raw_headers.length; i++) {
-								html += escHtml(d.raw_headers[i]) + '\n';
+							html += '<pre class="code-preview"><code>';
+							for (var j = 0; j < d.raw_headers.length; j++) {
+								html += escHtml(d.raw_headers[j]) + '\n';
 							}
 							html += '</code></pre>';
 						}

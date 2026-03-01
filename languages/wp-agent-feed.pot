@@ -2,9 +2,9 @@
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
-"Project-Id-Version: WP Agent Feed 0.3.1\n"
+"Project-Id-Version: WP Agent Feed 0.4.0\n"
 "Report-Msgid-Bugs-To: https://github.com/yamtd/wp-agent-feed/issues\n"
-"POT-Creation-Date: 2026-02-28T00:00:00+00:00\n"
+"POT-Creation-Date: 2026-03-01T00:00:00+00:00\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13,93 +13,143 @@ msgstr ""
 "Language-Team: LANGUAGE <LL@li.org>\n"
 
 #. Plugin Name of the plugin
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "WP Agent Feed"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "General Settings"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Post Types"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Content-Signal"
 msgstr ""
 
-#: wp-agent-feed.php
-msgid "Configure how WP Agent Feed serves Markdown responses. Settings defined as constants in wp-config.php take priority over these values."
+#: includes/admin.php
+msgid "Configure how your content is served to AI agents and search tools that request Markdown format."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
+msgid "Advanced: Settings defined as constants in wp-config.php take priority over these values."
+msgstr ""
+
+#: includes/admin.php
 msgid "Defined in wp-config.php. Remove the constant to manage this setting here."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Cache-Control"
 msgstr ""
 
-#: wp-agent-feed.php
-msgid "The Content-Signal header value sent with Markdown responses."
+#: includes/admin.php
+msgid "This HTTP header signals your preferences for how AI agents may use your content. Compliance is voluntary, similar to robots.txt."
 msgstr ""
 
-#: wp-agent-feed.php
-msgid "The Cache-Control header value sent with Markdown responses. Leave empty to not send this header."
+#: includes/admin.php
+msgid "What each value means"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
+msgid "Request no AI training"
+msgstr ""
+
+#: includes/admin.php
+msgid "Search indexing acceptable"
+msgstr ""
+
+#: includes/admin.php
+msgid "AI assistant reference acceptable"
+msgstr ""
+
+#: includes/admin.php
+msgid "Controls how long browsers and CDNs may cache the Markdown response. Leave empty to let the server decide."
+msgstr ""
+
+#. translators: %s is the default value
+#: includes/admin.php
+msgid "Default: %s"
+msgstr ""
+
+#. translators: %s is the recommended value
+#: includes/admin.php
+msgid "Recommended: %s"
+msgstr ""
+
+#: includes/admin.php
+msgid "Use recommended"
+msgstr ""
+
+#: includes/admin.php
+msgid "Allow CDN and proxy caches"
+msgstr ""
+
+#: includes/admin.php
+msgid "Browser cache only (no CDN)"
+msgstr ""
+
+#: includes/admin.php
+msgid "Cache duration in seconds (3600 = 1 hour)"
+msgstr ""
+
+#: includes/admin.php
+msgid "Select which post types are available as Markdown for AI agents and search tools. Only published content of the selected types will be served."
+msgstr ""
+
+#: includes/admin.php
 msgid "Cache Management"
 msgstr ""
 
 #. translators: %s is the cache directory path
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Cache directory: %s"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Regenerate All Cache"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Clear All Cache"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Permission denied."
 msgstr ""
 
 #. translators: %d is the number of deleted cache files
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Deleted %d cache files."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Starting..."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "No posts to process."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Request failed."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "processed..."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "cache files regenerated."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Are you sure you want to clear all cache files?"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Clearing..."
 msgstr ""
 
@@ -107,123 +157,131 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Status"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
+msgid "Diagnostics"
+msgstr ""
+
+#: includes/admin.php
+msgid "You have unsaved setting changes. Save changes before regenerating cache."
+msgstr ""
+
+#: includes/admin.php
 msgid "Writable"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Not writable"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Does not exist"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Present"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Missing"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "No published posts"
 msgstr ""
 
 #. translators: 1: cached count, 2: total count
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "%1$d / %2$d posts cached"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Cache directory"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid ".htaccess protection"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Cache coverage"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Verify Output"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Verifying..."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "All checks passed. Markdown output is correct."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Some checks failed."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Tested post:"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "No published posts found. Publish at least one post to run the test."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Cache generation failed. Check that the cache directory is writable."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Failed to read the generated cache file."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Check"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Expected"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Actual"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Response Preview"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "succeeded,"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "failed."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Check HTTP Headers"
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Checking..."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Could not connect to the server. This feature may not work in local development environments."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "The server may restrict HEAD requests. If headers appear incorrect, try a GET request with cURL."
 msgstr ""
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Duplicate headers may not be accurately displayed on your WordPress version."
 msgstr ""
