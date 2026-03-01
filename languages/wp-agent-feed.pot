@@ -38,7 +38,15 @@ msgid "Defined in wp-config.php. Remove the constant to manage this setting here
 msgstr ""
 
 #: wp-agent-feed.php
+msgid "Cache-Control"
+msgstr ""
+
+#: wp-agent-feed.php
 msgid "The Content-Signal header value sent with Markdown responses."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "The Cache-Control header value sent with Markdown responses. Leave empty to not send this header."
 msgstr ""
 
 #: wp-agent-feed.php
