@@ -55,7 +55,12 @@ msgid "%1$s = disallow AI training, %2$s = allow search indexing, %3$s = allow A
 msgstr ""
 
 #: includes/admin.php
-msgid "Controls how long browsers and CDNs may cache the Markdown response. The default \"public, max-age=3600\" allows caching for 1 hour. Leave empty to let the server decide."
+msgid "Controls how long browsers and CDNs may cache the Markdown response. Leave empty to let the server decide."
+msgstr ""
+
+#. translators: %s is the default value
+#: includes/admin.php
+msgid "Default: %s"
 msgstr ""
 
 #: includes/admin.php

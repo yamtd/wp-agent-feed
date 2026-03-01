@@ -58,8 +58,13 @@ msgid "%1$s = disallow AI training, %2$s = allow search indexing, %3$s = allow A
 msgstr "%1$s = AI 学習利用を禁止、%2$s = 検索インデックスを許可、%3$s = AI アシスタントがユーザーの質問に回答する際にコンテンツを参照することを許可。"
 
 #: includes/admin.php
-msgid "Controls how long browsers and CDNs may cache the Markdown response. The default \"public, max-age=3600\" allows caching for 1 hour. Leave empty to let the server decide."
-msgstr "ブラウザや CDN が Markdown レスポンスをキャッシュする時間を制御します。デフォルトの「public, max-age=3600」は1時間のキャッシュを許可します。空にするとサーバーの設定に従います。"
+msgid "Controls how long browsers and CDNs may cache the Markdown response. Leave empty to let the server decide."
+msgstr "ブラウザや CDN が Markdown レスポンスをキャッシュする時間を制御します。空にするとサーバーの設定に従います。"
+
+#. translators: %s is the default value
+#: includes/admin.php
+msgid "Default: %s"
+msgstr "デフォルト: %s"
 
 #: includes/admin.php
 msgid "Select which post types are available as Markdown for AI agents and search tools. Only published content of the selected types will be served."

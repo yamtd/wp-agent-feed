@@ -201,15 +201,23 @@ function render_field_content_signal() {
 		return;
 	}
 
-	$value = get_option( 'wp_agent_feed_content_signal', 'ai-train=no, search=yes, ai-input=yes' );
+	$default = 'ai-train=no, search=yes, ai-input=yes';
+	$value   = get_option( 'wp_agent_feed_content_signal', $default );
 	printf(
-		'<input type="text" id="wp_agent_feed_content_signal" name="wp_agent_feed_content_signal" value="%s" class="regular-text" />',
-		esc_attr( $value )
+		'<input type="text" id="wp_agent_feed_content_signal" name="wp_agent_feed_content_signal" value="%s" class="regular-text" placeholder="%s" />',
+		esc_attr( $value ),
+		esc_attr( $default )
 	);
 	echo '<p class="description">';
 	esc_html_e(
 		'This HTTP header tells AI agents how they may use your content. The default allows search engines and AI assistants to read your content but disallows AI model training.',
 		'wp-agent-feed'
+	);
+	echo '<br>';
+	printf(
+		/* translators: %s is the default value */
+		esc_html__( 'Default: %s', 'wp-agent-feed' ),
+		'<code>' . esc_html( $default ) . '</code>'
 	);
 	echo '</p>';
 	echo '<p class="description">';
@@ -238,15 +246,23 @@ function render_field_cache_control() {
 		return;
 	}
 
-	$value = get_option( 'wp_agent_feed_cache_control', 'public, max-age=3600' );
+	$default = 'public, max-age=3600';
+	$value   = get_option( 'wp_agent_feed_cache_control', $default );
 	printf(
-		'<input type="text" id="wp_agent_feed_cache_control" name="wp_agent_feed_cache_control" value="%s" class="regular-text" />',
-		esc_attr( $value )
+		'<input type="text" id="wp_agent_feed_cache_control" name="wp_agent_feed_cache_control" value="%s" class="regular-text" placeholder="%s" />',
+		esc_attr( $value ),
+		esc_attr( $default )
 	);
 	echo '<p class="description">';
 	esc_html_e(
-		'Controls how long browsers and CDNs may cache the Markdown response. The default "public, max-age=3600" allows caching for 1 hour. Leave empty to let the server decide.',
+		'Controls how long browsers and CDNs may cache the Markdown response. Leave empty to let the server decide.',
 		'wp-agent-feed'
+	);
+	echo '<br>';
+	printf(
+		/* translators: %s is the default value */
+		esc_html__( 'Default: %s', 'wp-agent-feed' ),
+		'<code>' . esc_html( $default ) . '</code>'
 	);
 	echo '</p>';
 }
