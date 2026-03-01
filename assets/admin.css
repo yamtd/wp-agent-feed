@@ -7,7 +7,7 @@
  */
 
 @layer components {
-	@scope (.waf-settings) {
+	@scope (.agfd-settings) {
 		/* --- Tokens --- */
 		:scope {
 			--color-ok: #00a32a;
@@ -95,6 +95,55 @@
 		:where(.post-type-label) {
 			display: block;
 			margin-block-end: 4px;
+		}
+
+		/* --- Tabs --- */
+		:where(.tabs) {
+			display: grid;
+			grid-template-columns: repeat(3, auto) 1fr;
+			margin-block-start: var(--space-md);
+		}
+
+		:where(.tab-radio) {
+			position: absolute;
+			opacity: 0;
+			pointer-events: none;
+		}
+
+		:where(.tab-label) {
+			padding: var(--space-sm) var(--space-md);
+			cursor: pointer;
+			border-block-end: 2px solid transparent;
+			font-size: 14px;
+			line-height: 1.4;
+
+			@media (any-hover: hover) {
+				&:hover {
+					border-color: var(--color-neutral);
+				}
+			}
+		}
+
+		:where(.tab-radio:checked + .tab-label) {
+			border-color: var(--wp-admin-theme-color, #2271b1);
+			font-weight: 600;
+		}
+
+		:where(.tab-radio:focus-visible + .tab-label) {
+			outline: 2px solid var(--wp-admin-theme-color, #2271b1);
+			outline-offset: -2px;
+		}
+
+		:where(.tab-panel) {
+			display: none;
+			grid-column: 1 / -1;
+			padding-block-start: var(--space-md);
+		}
+
+		:where(#agfd-tab-status:checked ~ .panel-status),
+		:where(#agfd-tab-settings:checked ~ .panel-settings),
+		:where(#agfd-tab-cache:checked ~ .panel-cache) {
+			display: block;
 		}
 	}
 }

@@ -423,14 +423,13 @@ function render_status_panel() {
 		'cov' => __( 'Cache coverage', 'wp-agent-feed' ),
 	);
 	?>
-	<h2><?php esc_html_e( 'Status', 'wp-agent-feed' ); ?></h2>
 	<table class="widefat striped status-table">
 		<tbody>
 			<?php foreach ( $rows as $row ) : ?>
 			<tr>
-				<td class="status-icon"><span id="waf-status-<?php echo esc_attr( $row['id'] ); ?>-icon" class="dashicons <?php echo esc_attr( $row['icon'] ); ?> <?php echo esc_attr( $row['css_class'] ); ?>"></span></td>
+				<td class="status-icon"><span id="agfd-status-<?php echo esc_attr( $row['id'] ); ?>-icon" class="dashicons <?php echo esc_attr( $row['icon'] ); ?> <?php echo esc_attr( $row['css_class'] ); ?>"></span></td>
 				<td><?php echo esc_html( $labels[ $row['id'] ] ); ?></td>
-				<td id="waf-status-<?php echo esc_attr( $row['id'] ); ?>-text"><?php echo esc_html( $row['text'] ); ?></td>
+				<td id="agfd-status-<?php echo esc_attr( $row['id'] ); ?>-text"><?php echo esc_html( $row['text'] ); ?></td>
 			</tr>
 			<?php endforeach; ?>
 		</tbody>
@@ -462,46 +461,59 @@ function render_settings_page() {
 
 	$all_overridden = is_overridden( 'CONTENT_SIGNAL' ) && is_overridden( 'POST_TYPES' ) && is_overridden( 'CACHE_CONTROL' );
 	?>
-	<div class="wrap waf-settings">
+	<div class="wrap agfd-settings">
 		<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 
-		<?php render_status_panel(); ?>
+		<div class="tabs">
+			<input type="radio" name="agfd-tab" id="agfd-tab-status" checked class="tab-radio" />
+			<label for="agfd-tab-status" class="tab-label"><?php esc_html_e( 'Status', 'wp-agent-feed' ); ?></label>
 
-		<hr />
+			<input type="radio" name="agfd-tab" id="agfd-tab-settings" class="tab-radio" />
+			<label for="agfd-tab-settings" class="tab-label"><?php esc_html_e( 'Settings', 'wp-agent-feed' ); ?></label>
 
-		<?php if ( $all_overridden ) : ?>
-			<?php do_settings_sections( 'wp-agent-feed' ); ?>
-		<?php else : ?>
-			<form method="post" action="options.php">
-				<?php
-				settings_fields( 'wp_agent_feed_settings' );
-				do_settings_sections( 'wp-agent-feed' );
-				submit_button();
-				?>
-			</form>
-		<?php endif; ?>
+			<input type="radio" name="agfd-tab" id="agfd-tab-cache" class="tab-radio" />
+			<label for="agfd-tab-cache" class="tab-label"><?php esc_html_e( 'Cache', 'wp-agent-feed' ); ?></label>
 
-		<hr />
+			<div class="tab-panel panel-status">
+				<?php render_status_panel(); ?>
+			</div>
 
-		<h2><?php esc_html_e( 'Cache Management', 'wp-agent-feed' ); ?></h2>
-		<p>
-			<?php
-			printf(
-				/* translators: %s is the cache directory path */
-				esc_html__( 'Cache directory: %s', 'wp-agent-feed' ),
-				'<code>' . esc_html( CACHE_DIR ) . '</code>'
-			);
-			?>
-		</p>
-		<p>
-			<button type="button" class="button button-primary" id="wp-agent-feed-regenerate">
-				<?php esc_html_e( 'Regenerate All Cache', 'wp-agent-feed' ); ?>
-			</button>
-			<button type="button" class="button" id="wp-agent-feed-clear">
-				<?php esc_html_e( 'Clear All Cache', 'wp-agent-feed' ); ?>
-			</button>
-			<span id="wp-agent-feed-status" class="inline-status"></span>
-		</p>
+			<div class="tab-panel panel-settings">
+				<?php if ( $all_overridden ) : ?>
+					<?php do_settings_sections( 'wp-agent-feed' ); ?>
+				<?php else : ?>
+					<form method="post" action="options.php">
+						<?php
+						settings_fields( 'wp_agent_feed_settings' );
+						do_settings_sections( 'wp-agent-feed' );
+						submit_button();
+						?>
+					</form>
+				<?php endif; ?>
+			</div>
+
+			<div class="tab-panel panel-cache">
+				<h2><?php esc_html_e( 'Cache Management', 'wp-agent-feed' ); ?></h2>
+				<p>
+					<?php
+					printf(
+						/* translators: %s is the cache directory path */
+						esc_html__( 'Cache directory: %s', 'wp-agent-feed' ),
+						'<code>' . esc_html( CACHE_DIR ) . '</code>'
+					);
+					?>
+				</p>
+				<p>
+					<button type="button" class="button button-primary" id="wp-agent-feed-regenerate">
+						<?php esc_html_e( 'Regenerate All Cache', 'wp-agent-feed' ); ?>
+					</button>
+					<button type="button" class="button" id="wp-agent-feed-clear">
+						<?php esc_html_e( 'Clear All Cache', 'wp-agent-feed' ); ?>
+					</button>
+					<span id="wp-agent-feed-status" class="inline-status"></span>
+				</p>
+			</div>
+		</div>
 
 		<?php render_admin_script(); ?>
 	</div>
@@ -829,8 +841,8 @@ function render_admin_script() {
 			doPost({ action: 'wp_agent_feed_diagnostics' }).then(function(json) {
 				if (!json.success) { return; }
 				json.data.rows.forEach(function(row) {
-					var icon = document.getElementById('waf-status-' + row.id + '-icon');
-					var text = document.getElementById('waf-status-' + row.id + '-text');
+					var icon = document.getElementById('agfd-status-' + row.id + '-icon');
+					var text = document.getElementById('agfd-status-' + row.id + '-text');
 					if (icon) {
 						icon.className = 'dashicons ' + row.icon + ' ' + row.css_class;
 					}
