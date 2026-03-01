@@ -58,6 +58,7 @@ Cache-Control: public, max-age=3600
 管理画面 **Settings > WP Agent Feed** から以下を設定できる:
 
 - **Content-Signal** — レスポンスに付与する `Content-Signal` ヘッダー値
+- **Cache-Control** — レスポンスに付与する `Cache-Control` ヘッダー値（空にするとヘッダーを送信しない）
 - **Post Types** — Markdown 配信対象の投稿タイプ（チェックボックスで選択）
 
 ### wp-config.php による上書き
@@ -72,6 +73,7 @@ Cache-Control: public, max-age=3600
 define( 'WpAgentFeed\CACHE_DIR', WP_CONTENT_DIR . '/cache/markdown/' );  // キャッシュ保存先
 define( 'WpAgentFeed\POST_TYPES', [ 'post', 'page', 'custom_type' ] );   // 対象の投稿タイプ
 define( 'WpAgentFeed\CONTENT_SIGNAL', 'ai-train=yes, search=yes, ai-input=yes' ); // Content-Signal
+define( 'WpAgentFeed\CACHE_CONTROL', 'public, max-age=3600' );                   // Cache-Control
 ```
 
 | 定数 | 説明 | デフォルト |
@@ -79,6 +81,7 @@ define( 'WpAgentFeed\CONTENT_SIGNAL', 'ai-train=yes, search=yes, ai-input=yes' )
 | `WpAgentFeed\CACHE_DIR` | キャッシュ保存先 | `wp-content/cache/markdown/` |
 | `WpAgentFeed\POST_TYPES` | 対象の投稿タイプ | `['post', 'page']` |
 | `WpAgentFeed\CONTENT_SIGNAL` | Content-Signal ヘッダー値 | `ai-train=no, search=yes, ai-input=yes` |
+| `WpAgentFeed\CACHE_CONTROL` | Cache-Control ヘッダー値 | `public, max-age=3600` |
 
 ## キャッシュ管理
 
