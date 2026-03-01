@@ -1220,7 +1220,18 @@ function ajax_live_test() {
 		}
 	}
 
-	$post_title = get_the_title( $post_id );
+	$post_title  = get_the_title( $post_id );
+	$token_count = estimate_tokens( $body );
+
+	// serve_markdown() が送信するヘッダーを再現。
+	$headers = array(
+		'Content-Type'      => 'text/markdown; charset=utf-8',
+		'Vary'              => 'Accept',
+		'X-Markdown-Tokens' => (string) $token_count,
+		'Content-Signal'    => CONTENT_SIGNAL,
+		'Content-Length'    => (string) strlen( $body ),
+		'Cache-Control'     => 'public, max-age=3600',
+	);
 
 	wp_send_json_success(
 		array(
@@ -1228,6 +1239,7 @@ function ajax_live_test() {
 			'checks'  => $result['checks'],
 			'post_id' => $post_id,
 			'title'   => $post_title,
+			'headers' => $headers,
 			'preview' => $preview,
 		)
 	);
@@ -1463,11 +1475,23 @@ function render_diagnostics_script() {
 			}
 			html += '</tbody></table>';
 
-			if (data.preview) {
+			if (data.headers || data.preview) {
 				html += '<details style="margin-top:12px">';
 				html += '<summary>' + escHtml('<?php echo esc_js( __( 'Response Preview', 'wp-agent-feed' ) ); ?>') + '</summary>';
+				var pre = '';
+				if (data.headers) {
+					for (var h in data.headers) {
+						if (data.headers.hasOwnProperty(h)) {
+							pre += h + ': ' + data.headers[h] + '\n';
+						}
+					}
+					pre += '\n';
+				}
+				if (data.preview) {
+					pre += data.preview;
+				}
 				html += '<pre style="background:#f0f0f1;padding:12px;overflow-x:auto;max-height:300px;margin-top:8px"><code>' +
-					escHtml(data.preview) + '</code></pre></details>';
+					escHtml(pre) + '</code></pre></details>';
 			}
 
 			resultEl.innerHTML = html;
