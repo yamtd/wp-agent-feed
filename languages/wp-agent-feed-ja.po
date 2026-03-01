@@ -5,8 +5,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: WP Agent Feed 0.3.1\n"
 "Report-Msgid-Bugs-To: https://github.com/yamtd/wp-agent-feed/issues\n"
-"POT-Creation-Date: 2026-02-28T00:00:00+00:00\n"
-"PO-Revision-Date: 2026-02-28T00:00:00+09:00\n"
+"POT-Creation-Date: 2026-03-01T00:00:00+00:00\n"
+"PO-Revision-Date: 2026-03-01T00:00:00+09:00\n"
 "Last-Translator: \n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
@@ -16,93 +16,106 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 #. Plugin Name of the plugin
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "WP Agent Feed"
 msgstr "WP Agent Feed"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "General Settings"
 msgstr "一般設定"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Post Types"
 msgstr "投稿タイプ"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Content-Signal"
 msgstr "Content-Signal"
 
-#: wp-agent-feed.php
-msgid "Configure how WP Agent Feed serves Markdown responses. Settings defined as constants in wp-config.php take priority over these values."
-msgstr "WP Agent Feed の Markdown レスポンス配信方法を設定します。wp-config.php で定義された定数が優先されます。"
+#: includes/admin.php
+msgid "Configure how your content is served to AI agents and search tools that request Markdown format."
+msgstr "AI エージェントや検索ツールが Markdown 形式でリクエストした際のコンテンツ配信方法を設定します。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
+msgid "Advanced: Settings defined as constants in wp-config.php take priority over these values."
+msgstr "上級者向け: wp-config.php で定数として定義された値が優先されます。"
+
+#: includes/admin.php
 msgid "Defined in wp-config.php. Remove the constant to manage this setting here."
 msgstr "wp-config.php で定義されています。この設定をここで管理するには、定数を削除してください。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Cache-Control"
 msgstr "Cache-Control"
 
-#: wp-agent-feed.php
-msgid "The Content-Signal header value sent with Markdown responses."
-msgstr "Markdown レスポンスに付与される Content-Signal ヘッダーの値。"
+#: includes/admin.php
+msgid "This HTTP header tells AI agents how they may use your content. The default allows search engines and AI assistants to read your content but disallows AI model training."
+msgstr "この HTTP ヘッダーは、AI エージェントがコンテンツをどのように利用できるかを示します。デフォルトでは、検索エンジンや AI アシスタントによる閲覧を許可し、AI モデルの学習利用を禁止します。"
 
-#: wp-agent-feed.php
-msgid "The Cache-Control header value sent with Markdown responses. Leave empty to not send this header."
-msgstr "Markdown レスポンスに付与される Cache-Control ヘッダーの値。空にするとヘッダーを送信しません。"
+#. translators: 1: ai-train directive, 2: search directive, 3: ai-input directive
+#: includes/admin.php
+msgid "%1$s = disallow AI training, %2$s = allow search indexing, %3$s = allow AI assistants to reference your content when answering user questions."
+msgstr "%1$s = AI 学習利用を禁止、%2$s = 検索インデックスを許可、%3$s = AI アシスタントがユーザーの質問に回答する際にコンテンツを参照することを許可。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
+msgid "Controls how long browsers and CDNs may cache the Markdown response. The default \"public, max-age=3600\" allows caching for 1 hour. Leave empty to let the server decide."
+msgstr "ブラウザや CDN が Markdown レスポンスをキャッシュする時間を制御します。デフォルトの「public, max-age=3600」は1時間のキャッシュを許可します。空にするとサーバーの設定に従います。"
+
+#: includes/admin.php
+msgid "Select which post types are available as Markdown for AI agents and search tools. Only published content of the selected types will be served."
+msgstr "AI エージェントや検索ツールに Markdown として配信する投稿タイプを選択します。選択されたタイプの公開済みコンテンツのみが配信されます。"
+
+#: includes/admin.php
 msgid "Cache Management"
 msgstr "キャッシュ管理"
 
 #. translators: %s is the cache directory path
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Cache directory: %s"
 msgstr "キャッシュディレクトリ: %s"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Regenerate All Cache"
 msgstr "全キャッシュ再生成"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Clear All Cache"
 msgstr "全キャッシュ削除"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Permission denied."
 msgstr "権限がありません。"
 
 #. translators: %d is the number of deleted cache files
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Deleted %d cache files."
 msgstr "%d 件のキャッシュファイルを削除しました。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Starting..."
 msgstr "開始中…"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "No posts to process."
 msgstr "処理する投稿がありません。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Request failed."
 msgstr "リクエストに失敗しました。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "processed..."
 msgstr "件処理済み…"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "cache files regenerated."
 msgstr "件のキャッシュファイルを再生成しました。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Are you sure you want to clear all cache files?"
 msgstr "すべてのキャッシュファイルを削除してもよろしいですか？"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Clearing..."
 msgstr "削除中…"
 
@@ -110,123 +123,127 @@ msgstr "削除中…"
 msgid "Settings"
 msgstr "設定"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Status"
 msgstr "ステータス"
 
-#: wp-agent-feed.php
+#: includes/admin.php
+msgid "Cache"
+msgstr "キャッシュ"
+
+#: includes/admin.php
 msgid "Writable"
 msgstr "書き込み可能"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Not writable"
 msgstr "書き込み不可"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Does not exist"
 msgstr "存在しません"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Present"
 msgstr "あり"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Missing"
 msgstr "なし"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "No published posts"
 msgstr "公開済み投稿なし"
 
 #. translators: 1: cached count, 2: total count
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "%1$d / %2$d posts cached"
 msgstr "%1$d / %2$d 件キャッシュ済み"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Cache directory"
 msgstr "キャッシュディレクトリ"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid ".htaccess protection"
 msgstr ".htaccess 保護"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Cache coverage"
 msgstr "キャッシュカバー率"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Verify Output"
 msgstr "出力を検証"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Verifying..."
 msgstr "検証中…"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "All checks passed. Markdown output is correct."
 msgstr "すべてのチェックに合格しました。Markdown 出力は正常です。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Some checks failed."
 msgstr "一部のチェックに失敗しました。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Tested post:"
 msgstr "検証した投稿:"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "No published posts found. Publish at least one post to run the test."
 msgstr "公開済みの投稿が見つかりません。検証するには、投稿を1つ以上公開してください。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Cache generation failed. Check that the cache directory is writable."
 msgstr "キャッシュの生成に失敗しました。キャッシュディレクトリが書き込み可能か確認してください。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Failed to read the generated cache file."
 msgstr "生成されたキャッシュファイルの読み込みに失敗しました。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Check"
 msgstr "チェック項目"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Expected"
 msgstr "期待値"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Actual"
 msgstr "実際の値"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Response Preview"
 msgstr "レスポンスプレビュー"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "succeeded,"
 msgstr "件成功、"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "failed."
 msgstr "件失敗。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Check HTTP Headers"
 msgstr "HTTP ヘッダーを確認"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Checking..."
 msgstr "確認中…"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Could not connect to the server. This feature may not work in local development environments."
 msgstr "サーバーに接続できませんでした。この機能はローカル開発環境では動作しない場合があります。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "The server may restrict HEAD requests. If headers appear incorrect, try a GET request with cURL."
 msgstr "サーバーが HEAD リクエストを制限している可能性があります。ヘッダーが正しく表示されない場合は、cURL で GET リクエストをお試しください。"
 
-#: wp-agent-feed.php
+#: includes/admin.php
 msgid "Duplicate headers may not be accurately displayed on your WordPress version."
 msgstr "お使いの WordPress バージョンでは重複ヘッダーが正確に表示されない場合があります。"
