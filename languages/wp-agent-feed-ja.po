@@ -136,10 +136,6 @@ msgid "%1$d / %2$d posts cached"
 msgstr "%1$d / %2$d 件キャッシュ済み"
 
 #: wp-agent-feed.php
-msgid "Site URL (loopback target)"
-msgstr "サイト URL（ループバック先）"
-
-#: wp-agent-feed.php
 msgid "Cache directory"
 msgstr "キャッシュディレクトリ"
 
@@ -152,24 +148,36 @@ msgid "Cache coverage"
 msgstr "キャッシュカバー率"
 
 #: wp-agent-feed.php
-msgid "Run Live Test"
-msgstr "ライブテスト実行"
+msgid "Verify Output"
+msgstr "出力を検証"
 
 #: wp-agent-feed.php
-msgid "Testing..."
-msgstr "テスト中…"
+msgid "Verifying..."
+msgstr "検証中…"
 
 #: wp-agent-feed.php
-msgid "All checks passed. Markdown serving is working correctly."
-msgstr "すべてのチェックに合格しました。Markdown 配信は正常に動作しています。"
+msgid "All checks passed. Markdown output is correct."
+msgstr "すべてのチェックに合格しました。Markdown 出力は正常です。"
 
 #: wp-agent-feed.php
 msgid "Some checks failed."
 msgstr "一部のチェックに失敗しました。"
 
 #: wp-agent-feed.php
-msgid "Tested URL:"
-msgstr "テスト URL:"
+msgid "Tested post:"
+msgstr "検証した投稿:"
+
+#: wp-agent-feed.php
+msgid "No published posts found. Publish at least one post to run the test."
+msgstr "公開済みの投稿が見つかりません。検証するには、投稿を1つ以上公開してください。"
+
+#: wp-agent-feed.php
+msgid "Cache generation failed. Check that the cache directory is writable."
+msgstr "キャッシュの生成に失敗しました。キャッシュディレクトリが書き込み可能か確認してください。"
+
+#: wp-agent-feed.php
+msgid "Failed to read the generated cache file."
+msgstr "生成されたキャッシュファイルの読み込みに失敗しました。"
 
 #: wp-agent-feed.php
 msgid "Check"
@@ -186,23 +194,6 @@ msgstr "実際の値"
 #: wp-agent-feed.php
 msgid "Response Preview"
 msgstr "レスポンスプレビュー"
-
-#: wp-agent-feed.php
-msgid "No published posts found. Publish at least one post to run the live test."
-msgstr "公開済みの投稿が見つかりません。ライブテストを実行するには、投稿を1つ以上公開してください。"
-
-#: wp-agent-feed.php
-msgid "Could not resolve permalink for test post."
-msgstr "テスト投稿のパーマリンクを取得できませんでした。"
-
-#. translators: %s is the error message
-#: wp-agent-feed.php
-msgid "Loopback request failed: %s"
-msgstr "ループバックリクエストに失敗しました: %s"
-
-#: wp-agent-feed.php
-msgid "This may indicate that loopback requests are blocked. Check your server firewall or security plugin settings."
-msgstr "ループバックリクエストがブロックされている可能性があります。サーバーのファイアウォールやセキュリティプラグインの設定を確認してください。"
 
 #: wp-agent-feed.php
 msgid "succeeded,"

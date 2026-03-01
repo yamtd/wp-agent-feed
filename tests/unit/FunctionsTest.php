@@ -14,7 +14,7 @@ use function WpAgentFeed\clear_all_cache;
 use function WpAgentFeed\robots_disallow_path;
 use function WpAgentFeed\filter_robots_txt;
 use function WpAgentFeed\get_cache_stats;
-use function WpAgentFeed\validate_loopback_response;
+use function WpAgentFeed\validate_markdown_output;
 use const WpAgentFeed\CACHE_DIR;
 
 /**
@@ -601,19 +601,14 @@ final class FunctionsTest extends TestCase {
 	}
 
 	// =========================================================
-	// validate_loopback_response()
+	// validate_markdown_output()
 	// =========================================================
 
 	#[Test]
-	public function validate_loopback_all_pass(): void {
-		$result = validate_loopback_response(
-			200,
-			array(
-				'content-type'      => 'text/markdown; charset=utf-8',
-				'x-markdown-tokens' => '523',
-				'content-signal'    => 'ai-train=no, search=yes, ai-input=yes',
-			),
-			"---\ntitle: \"Test\"\n---\n\n# Hello\n"
+	public function validate_markdown_output_all_pass(): void {
+		$result = validate_markdown_output(
+			"---\ntitle: \"Test\"\n---\n\n# Hello\n",
+			'ai-train=no, search=yes, ai-input=yes'
 		);
 		$this->assertTrue( $result['pass'] );
 		foreach ( $result['checks'] as $check ) {
@@ -622,93 +617,16 @@ final class FunctionsTest extends TestCase {
 	}
 
 	#[Test]
-	public function validate_loopback_wrong_status_code(): void {
-		$result = validate_loopback_response(
-			404,
-			array( 'content-type' => 'text/html' ),
-			'<html>Not found</html>'
-		);
-		$this->assertFalse( $result['pass'] );
-		$this->assertFalse( $result['checks'][0]['pass'] );
-		$this->assertSame( '404', $result['checks'][0]['actual'] );
-	}
-
-	#[Test]
-	public function validate_loopback_wrong_content_type(): void {
-		$result = validate_loopback_response(
-			200,
-			array(
-				'content-type'      => 'text/html; charset=utf-8',
-				'x-markdown-tokens' => '100',
-				'content-signal'    => 'test',
-			),
-			"---\ntitle: \"Test\"\n---\n"
-		);
-		$this->assertFalse( $result['pass'] );
-		$this->assertTrue( $result['checks'][0]['pass'] );
-		$this->assertFalse( $result['checks'][1]['pass'] );
-	}
-
-	#[Test]
-	public function validate_loopback_missing_tokens_header(): void {
-		$result = validate_loopback_response(
-			200,
-			array(
-				'content-type'   => 'text/markdown; charset=utf-8',
-				'content-signal' => 'test',
-			),
-			"---\ntitle: \"Test\"\n---\n"
-		);
-		$this->assertFalse( $result['pass'] );
-		$tokens_check = null;
-		foreach ( $result['checks'] as $c ) {
-			if ( 'x_markdown_tokens' === $c['name'] ) {
-				$tokens_check = $c;
-				break;
-			}
-		}
-		$this->assertNotNull( $tokens_check );
-		$this->assertFalse( $tokens_check['pass'] );
-	}
-
-	#[Test]
-	public function validate_loopback_empty_body(): void {
-		$result = validate_loopback_response(
-			200,
-			array(
-				'content-type'      => 'text/markdown; charset=utf-8',
-				'x-markdown-tokens' => '0',
-				'content-signal'    => 'test',
-			),
-			''
-		);
+	public function validate_markdown_output_empty_body(): void {
+		$result = validate_markdown_output( '', 'test' );
 		$this->assertFalse( $result['pass'] );
 	}
 
 	#[Test]
-	public function validate_loopback_case_insensitive_headers(): void {
-		$result = validate_loopback_response(
-			200,
-			array(
-				'Content-Type'      => 'text/markdown; charset=utf-8',
-				'X-Markdown-Tokens' => '100',
-				'Content-Signal'    => 'test',
-			),
-			"---\ntitle: \"Test\"\n---\n"
-		);
-		$this->assertTrue( $result['pass'] );
-	}
-
-	#[Test]
-	public function validate_loopback_no_frontmatter(): void {
-		$result = validate_loopback_response(
-			200,
-			array(
-				'content-type'      => 'text/markdown; charset=utf-8',
-				'x-markdown-tokens' => '100',
-				'content-signal'    => 'test',
-			),
-			'# Just a heading without frontmatter'
+	public function validate_markdown_output_no_frontmatter(): void {
+		$result = validate_markdown_output(
+			'# Just a heading without frontmatter',
+			'test'
 		);
 		$this->assertFalse( $result['pass'] );
 		$frontmatter_check = null;
@@ -720,5 +638,42 @@ final class FunctionsTest extends TestCase {
 		}
 		$this->assertNotNull( $frontmatter_check );
 		$this->assertFalse( $frontmatter_check['pass'] );
+	}
+
+	#[Test]
+	public function validate_markdown_output_empty_content_signal(): void {
+		$result = validate_markdown_output(
+			"---\ntitle: \"Test\"\n---\n\n# Hello\n",
+			''
+		);
+		$this->assertFalse( $result['pass'] );
+		$signal_check = null;
+		foreach ( $result['checks'] as $c ) {
+			if ( 'content_signal' === $c['name'] ) {
+				$signal_check = $c;
+				break;
+			}
+		}
+		$this->assertNotNull( $signal_check );
+		$this->assertFalse( $signal_check['pass'] );
+	}
+
+	#[Test]
+	public function validate_markdown_output_has_token_estimate(): void {
+		$result = validate_markdown_output(
+			"---\ntitle: \"Test\"\n---\n\n# Hello World\n",
+			'test'
+		);
+		$this->assertTrue( $result['pass'] );
+		$token_check = null;
+		foreach ( $result['checks'] as $c ) {
+			if ( 'token_estimate' === $c['name'] ) {
+				$token_check = $c;
+				break;
+			}
+		}
+		$this->assertNotNull( $token_check );
+		$this->assertTrue( $token_check['pass'] );
+		$this->assertGreaterThan( 0, (int) $token_check['actual'] );
 	}
 }

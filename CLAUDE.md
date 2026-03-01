@@ -78,7 +78,7 @@ npx @wordpress/env stop
 | `escape_yaml()` | YAML 文字列エスケープ | No |
 | `estimate_tokens()` | トークン数推定 | No |
 | `get_cache_stats()` | キャッシュファイル数カウント | No |
-| `validate_loopback_response()` | ループバックレスポンス検証 | No |
+| `validate_markdown_output()` | Markdown 出力検証 | No |
 | `add_admin_menu()` | Settings メニューにページ追加 | Yes |
 | `register_settings()` | Settings API 登録 | Yes |
 | `sanitize_content_signal()` | Content-Signal サニタイズ | Yes |
@@ -88,7 +88,7 @@ npx @wordpress/env stop
 | `render_settings_page()` | 設定ページ全体描画 | Yes |
 | `ajax_regenerate()` | AJAX キャッシュ一括再生成 | Yes |
 | `ajax_clear()` | AJAX キャッシュ全削除 | Yes |
-| `ajax_live_test()` | AJAX ループバックテスト | Yes |
+| `ajax_live_test()` | AJAX 出力検証テスト | Yes |
 | `uninstall()` | プラグイン削除時クリーンアップ | Yes |
 
 ## 配布方式

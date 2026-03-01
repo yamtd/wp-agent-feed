@@ -601,53 +601,16 @@ function get_cache_stats( $cache_dir ) {
 }
 
 /**
- * ループバック HTTP レスポンスを Markdown 配信の期待値と照合する。
+ * キャッシュファイルの Markdown 出力を検証する。
  *
- * @param int    $status_code HTTP ステータスコード。
- * @param array  $headers     レスポンスヘッダーの連想配列（plain array）。
- * @param string $body        レスポンスボディ。
+ * @param string $body           キャッシュファイルの内容。
+ * @param string $content_signal Content-Signal 設定値。
  * @return array { pass: bool, checks: array[] }
  */
-function validate_loopback_response( $status_code, $headers, $body ) {
-	$headers = array_change_key_case( $headers, CASE_LOWER );
-	$checks  = array();
+function validate_markdown_output( $body, $content_signal ) {
+	$checks = array();
 
-	// 1. Status code.
-	$checks[] = array(
-		'name'   => 'status_code',
-		'pass'   => 200 === $status_code,
-		'expect' => '200',
-		'actual' => (string) $status_code,
-	);
-
-	// 2. Content-Type.
-	$ct       = isset( $headers['content-type'] ) ? $headers['content-type'] : '';
-	$checks[] = array(
-		'name'   => 'content_type',
-		'pass'   => 0 === strpos( $ct, 'text/markdown' ),
-		'expect' => 'text/markdown',
-		'actual' => '' !== $ct ? $ct : '(empty)',
-	);
-
-	// 3. X-Markdown-Tokens.
-	$tokens   = isset( $headers['x-markdown-tokens'] ) ? $headers['x-markdown-tokens'] : '';
-	$checks[] = array(
-		'name'   => 'x_markdown_tokens',
-		'pass'   => '' !== $tokens && is_numeric( $tokens ),
-		'expect' => 'numeric',
-		'actual' => '' !== $tokens ? $tokens : '(missing)',
-	);
-
-	// 4. Content-Signal.
-	$signal   = isset( $headers['content-signal'] ) ? $headers['content-signal'] : '';
-	$checks[] = array(
-		'name'   => 'content_signal',
-		'pass'   => '' !== $signal,
-		'expect' => 'non-empty',
-		'actual' => '' !== $signal ? $signal : '(missing)',
-	);
-
-	// 5. Frontmatter.
+	// 1. Frontmatter.
 	$has_fm   = 0 === strpos( $body, "---\n" ) || 0 === strpos( $body, "---\r\n" );
 	$checks[] = array(
 		'name'   => 'frontmatter',
@@ -656,13 +619,30 @@ function validate_loopback_response( $status_code, $headers, $body ) {
 		'actual' => $has_fm ? 'starts with ---' : '(no frontmatter)',
 	);
 
-	// 6. Body not empty.
+	// 2. Body not empty.
 	$len      = strlen( $body );
 	$checks[] = array(
 		'name'   => 'body_not_empty',
 		'pass'   => $len > 0,
 		'expect' => '> 0 bytes',
 		'actual' => $len . ' bytes',
+	);
+
+	// 3. Token estimate.
+	$tokens   = estimate_tokens( $body );
+	$checks[] = array(
+		'name'   => 'token_estimate',
+		'pass'   => $tokens > 0,
+		'expect' => '> 0',
+		'actual' => (string) $tokens,
+	);
+
+	// 4. Content-Signal configured.
+	$checks[] = array(
+		'name'   => 'content_signal',
+		'pass'   => '' !== $content_signal,
+		'expect' => 'non-empty',
+		'actual' => '' !== $content_signal ? $content_signal : '(empty)',
 	);
 
 	$pass = true;
@@ -990,11 +970,6 @@ function render_status_panel() {
 	<table class="widefat striped" style="max-width: 600px;">
 		<tbody>
 			<tr>
-				<td style="width: 24px;"><span class="dashicons dashicons-admin-links" style="color: #787c82;"></span></td>
-				<td><?php esc_html_e( 'Site URL (loopback target)', 'wp-agent-feed' ); ?></td>
-				<td><code><?php echo esc_html( site_url() ); ?></code></td>
-			</tr>
-			<tr>
 				<td style="width: 24px;"><span class="dashicons <?php echo esc_attr( $dir_icon ); ?>" style="color: <?php echo esc_attr( $dir_color ); ?>;"></span></td>
 				<td><?php esc_html_e( 'Cache directory', 'wp-agent-feed' ); ?></td>
 				<td><?php echo esc_html( $dir_text ); ?></td>
@@ -1013,7 +988,7 @@ function render_status_panel() {
 	</table>
 	<p style="margin-top: 12px;">
 		<button type="button" class="button" id="wp-agent-feed-live-test">
-			<?php esc_html_e( 'Run Live Test', 'wp-agent-feed' ); ?>
+			<?php esc_html_e( 'Verify Output', 'wp-agent-feed' ); ?>
 		</button>
 		<span id="wp-agent-feed-live-test-status" style="margin-left: 8px;"></span>
 	</p>
@@ -1177,7 +1152,10 @@ function ajax_clear() {
 }
 
 /**
- * AJAX: ループバックテストで Markdown 配信を検証。
+ * AJAX: 出力検証テスト。
+ *
+ * 実際の投稿でキャッシュを生成し、ファイルを読み込んで出力を検証する。
+ * HTTP ループバック不要のため、Docker 等のコンテナ環境でも動作する。
  */
 function ajax_live_test() {
 	check_ajax_referer( 'wp_agent_feed_cache' );
@@ -1201,57 +1179,37 @@ function ajax_live_test() {
 		wp_send_json_error(
 			array(
 				'code'    => 'no_posts',
-				'message' => __( 'No published posts found. Publish at least one post to run the live test.', 'wp-agent-feed' ),
+				'message' => __( 'No published posts found. Publish at least one post to run the test.', 'wp-agent-feed' ),
 			)
 		);
 	}
 
-	$post_id  = $posts[0];
-	$post_url = get_permalink( $post_id );
+	$post_id = $posts[0];
 
-	if ( ! $post_url ) {
+	// キャッシュを（再）生成。
+	$generated = generate_cache( $post_id );
+	if ( ! $generated ) {
 		wp_send_json_error(
 			array(
-				'code'    => 'no_permalink',
-				'message' => __( 'Could not resolve permalink for test post.', 'wp-agent-feed' ),
+				'code'    => 'generate_failed',
+				'message' => __( 'Cache generation failed. Check that the cache directory is writable.', 'wp-agent-feed' ),
 			)
 		);
 	}
 
-	/** This filter controls SSL verification for the loopback test request. */
-	$sslverify = apply_filters( 'wp_agent_feed_loopback_sslverify', true );
-
-	$response = wp_remote_get(
-		$post_url,
-		array(
-			'headers'   => array( 'Accept' => 'text/markdown' ),
-			'timeout'   => 15,
-			'sslverify' => $sslverify,
-		)
-	);
-
-	if ( is_wp_error( $response ) ) {
+	$path = cache_path( $post_id );
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+	$body = file_get_contents( $path );
+	if ( false === $body ) {
 		wp_send_json_error(
 			array(
-				'code'    => 'request_failed',
-				/* translators: %s is the error message */
-				'message' => sprintf( __( 'Loopback request failed: %s', 'wp-agent-feed' ), $response->get_error_message() ),
-				'url'     => $post_url,
+				'code'    => 'read_failed',
+				'message' => __( 'Failed to read the generated cache file.', 'wp-agent-feed' ),
 			)
 		);
 	}
 
-	$status_code = wp_remote_retrieve_response_code( $response );
-	$raw_headers = wp_remote_retrieve_headers( $response );
-	$body        = wp_remote_retrieve_body( $response );
-
-	// CaseInsensitiveDictionary → plain array.
-	$headers_array = array();
-	foreach ( $raw_headers as $key => $value ) {
-		$headers_array[ $key ] = $value;
-	}
-
-	$result = validate_loopback_response( $status_code, $headers_array, $body );
+	$result = validate_markdown_output( $body, CONTENT_SIGNAL );
 
 	$preview = '';
 	if ( strlen( $body ) > 0 ) {
@@ -1262,12 +1220,14 @@ function ajax_live_test() {
 		}
 	}
 
+	$post_title = get_the_title( $post_id );
+
 	wp_send_json_success(
 		array(
 			'pass'    => $result['pass'],
 			'checks'  => $result['checks'],
-			'url'     => $post_url,
 			'post_id' => $post_id,
+			'title'   => $post_title,
 			'preview' => $preview,
 		)
 	);
@@ -1436,14 +1396,9 @@ function render_diagnostics_script() {
 			return div.innerHTML;
 		}
 
-		function escAttr(str) {
-			return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
-				.replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-		}
-
 		btn.addEventListener('click', function() {
 			btn.disabled = true;
-			statusEl.textContent = '<?php echo esc_js( __( 'Testing...', 'wp-agent-feed' ) ); ?>';
+			statusEl.textContent = '<?php echo esc_js( __( 'Verifying...', 'wp-agent-feed' ) ); ?>';
 			resultEl.style.display = 'none';
 			resultEl.innerHTML = '';
 
@@ -1472,17 +1427,7 @@ function render_diagnostics_script() {
 
 		function renderError(data) {
 			var msg = (data && data.message) ? data.message : (data || 'Unknown error');
-			var html = '<div class="notice notice-error inline"><p>' + escHtml(msg) + '</p>';
-			if (data && data.url) {
-				html += '<p>' + escHtml('<?php echo esc_js( __( 'Tested URL:', 'wp-agent-feed' ) ); ?>') +
-					' <code>' + escHtml(data.url) + '</code></p>';
-			}
-			if (data && data.code === 'request_failed') {
-				html += '<p class="description">' +
-					escHtml('<?php echo esc_js( __( 'This may indicate that loopback requests are blocked. Check your server firewall or security plugin settings.', 'wp-agent-feed' ) ); ?>') +
-					'</p>';
-			}
-			html += '</div>';
+			var html = '<div class="notice notice-error inline"><p>' + escHtml(msg) + '</p></div>';
 			resultEl.innerHTML = html;
 			resultEl.style.display = 'block';
 		}
@@ -1490,14 +1435,14 @@ function render_diagnostics_script() {
 		function renderResult(data) {
 			var noticeClass = data.pass ? 'notice-success' : 'notice-error';
 			var summaryText = data.pass
-				? '<?php echo esc_js( __( 'All checks passed. Markdown serving is working correctly.', 'wp-agent-feed' ) ); ?>'
+				? '<?php echo esc_js( __( 'All checks passed. Markdown output is correct.', 'wp-agent-feed' ) ); ?>'
 				: '<?php echo esc_js( __( 'Some checks failed.', 'wp-agent-feed' ) ); ?>';
 
 			var html = '<div class="notice ' + noticeClass + ' inline"><p><strong>' +
 				escHtml(summaryText) + '</strong></p></div>';
 
-			html += '<p>' + escHtml('<?php echo esc_js( __( 'Tested URL:', 'wp-agent-feed' ) ); ?>') +
-				' <a href="' + escAttr(data.url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(data.url) + '</a></p>';
+			html += '<p>' + escHtml('<?php echo esc_js( __( 'Tested post:', 'wp-agent-feed' ) ); ?>') +
+				' ' + escHtml(data.title) + ' <code>#' + data.post_id + '</code></p>';
 
 			html += '<table class="widefat striped" style="max-width:700px">';
 			html += '<thead><tr><th style="width:24px"></th>';

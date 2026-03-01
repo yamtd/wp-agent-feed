@@ -133,10 +133,6 @@ msgid "%1$d / %2$d posts cached"
 msgstr ""
 
 #: wp-agent-feed.php
-msgid "Site URL (loopback target)"
-msgstr ""
-
-#: wp-agent-feed.php
 msgid "Cache directory"
 msgstr ""
 
@@ -149,15 +145,15 @@ msgid "Cache coverage"
 msgstr ""
 
 #: wp-agent-feed.php
-msgid "Run Live Test"
+msgid "Verify Output"
 msgstr ""
 
 #: wp-agent-feed.php
-msgid "Testing..."
+msgid "Verifying..."
 msgstr ""
 
 #: wp-agent-feed.php
-msgid "All checks passed. Markdown serving is working correctly."
+msgid "All checks passed. Markdown output is correct."
 msgstr ""
 
 #: wp-agent-feed.php
@@ -165,7 +161,19 @@ msgid "Some checks failed."
 msgstr ""
 
 #: wp-agent-feed.php
-msgid "Tested URL:"
+msgid "Tested post:"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "No published posts found. Publish at least one post to run the test."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Cache generation failed. Check that the cache directory is writable."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Failed to read the generated cache file."
 msgstr ""
 
 #: wp-agent-feed.php
@@ -182,23 +190,6 @@ msgstr ""
 
 #: wp-agent-feed.php
 msgid "Response Preview"
-msgstr ""
-
-#: wp-agent-feed.php
-msgid "No published posts found. Publish at least one post to run the live test."
-msgstr ""
-
-#: wp-agent-feed.php
-msgid "Could not resolve permalink for test post."
-msgstr ""
-
-#. translators: %s is the error message
-#: wp-agent-feed.php
-msgid "Loopback request failed: %s"
-msgstr ""
-
-#: wp-agent-feed.php
-msgid "This may indicate that loopback requests are blocked. Check your server firewall or security plugin settings."
 msgstr ""
 
 #: wp-agent-feed.php
