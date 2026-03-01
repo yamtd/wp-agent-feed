@@ -574,6 +574,111 @@ function estimate_tokens( $text ) {
 	return (int) ceil( $len / $chars_per_token );
 }
 
+/**
+ * キャッシュディレクトリ内の数値名 .md ファイル数を返す。
+ *
+ * @param string $cache_dir キャッシュディレクトリのパス（末尾スラッシュ付き）。
+ * @return int ファイル数。
+ */
+function get_cache_stats( $cache_dir ) {
+	if ( ! is_dir( $cache_dir ) ) {
+		return 0;
+	}
+
+	$files = glob( $cache_dir . '*.md' );
+	if ( ! is_array( $files ) ) {
+		return 0;
+	}
+
+	$count = 0;
+	foreach ( $files as $file ) {
+		if ( preg_match( '/^\d+\.md$/', basename( $file ) ) ) {
+			++$count;
+		}
+	}
+
+	return $count;
+}
+
+/**
+ * ループバック HTTP レスポンスを Markdown 配信の期待値と照合する。
+ *
+ * @param int    $status_code HTTP ステータスコード。
+ * @param array  $headers     レスポンスヘッダーの連想配列（plain array）。
+ * @param string $body        レスポンスボディ。
+ * @return array { pass: bool, checks: array[] }
+ */
+function validate_loopback_response( $status_code, $headers, $body ) {
+	$headers = array_change_key_case( $headers, CASE_LOWER );
+	$checks  = array();
+
+	// 1. Status code.
+	$checks[] = array(
+		'name'   => 'status_code',
+		'pass'   => 200 === $status_code,
+		'expect' => '200',
+		'actual' => (string) $status_code,
+	);
+
+	// 2. Content-Type.
+	$ct       = isset( $headers['content-type'] ) ? $headers['content-type'] : '';
+	$checks[] = array(
+		'name'   => 'content_type',
+		'pass'   => 0 === strpos( $ct, 'text/markdown' ),
+		'expect' => 'text/markdown',
+		'actual' => '' !== $ct ? $ct : '(empty)',
+	);
+
+	// 3. X-Markdown-Tokens.
+	$tokens   = isset( $headers['x-markdown-tokens'] ) ? $headers['x-markdown-tokens'] : '';
+	$checks[] = array(
+		'name'   => 'x_markdown_tokens',
+		'pass'   => '' !== $tokens && is_numeric( $tokens ),
+		'expect' => 'numeric',
+		'actual' => '' !== $tokens ? $tokens : '(missing)',
+	);
+
+	// 4. Content-Signal.
+	$signal   = isset( $headers['content-signal'] ) ? $headers['content-signal'] : '';
+	$checks[] = array(
+		'name'   => 'content_signal',
+		'pass'   => '' !== $signal,
+		'expect' => 'non-empty',
+		'actual' => '' !== $signal ? $signal : '(missing)',
+	);
+
+	// 5. Frontmatter.
+	$has_fm   = 0 === strpos( $body, "---\n" ) || 0 === strpos( $body, "---\r\n" );
+	$checks[] = array(
+		'name'   => 'frontmatter',
+		'pass'   => $has_fm,
+		'expect' => 'starts with ---',
+		'actual' => $has_fm ? 'starts with ---' : '(no frontmatter)',
+	);
+
+	// 6. Body not empty.
+	$len      = strlen( $body );
+	$checks[] = array(
+		'name'   => 'body_not_empty',
+		'pass'   => $len > 0,
+		'expect' => '> 0 bytes',
+		'actual' => $len . ' bytes',
+	);
+
+	$pass = true;
+	foreach ( $checks as $check ) {
+		if ( ! $check['pass'] ) {
+			$pass = false;
+			break;
+		}
+	}
+
+	return array(
+		'pass'   => $pass,
+		'checks' => $checks,
+	);
+}
+
 /* ========================================
  * WP-CLI: キャッシュ一括再生成
  * 使い方: wp markdown-cache regenerate
@@ -799,6 +904,119 @@ function render_field_post_types() {
 }
 
 /**
+ * ステータスパネル用の診断データを収集。
+ *
+ * @return array { cache_dir_exists, cache_dir_writable, htaccess_exists, cached_count, total_count, cache_dir }
+ */
+function get_diagnostics_data() {
+	$cached = get_cache_stats( CACHE_DIR );
+
+	$total = 0;
+	foreach ( POST_TYPES as $pt ) {
+		$counts = wp_count_posts( $pt );
+		if ( isset( $counts->publish ) ) {
+			$total += (int) $counts->publish;
+		}
+	}
+
+	return array(
+		'cache_dir_exists'   => is_dir( CACHE_DIR ),
+		'cache_dir_writable' => is_dir( CACHE_DIR ) && wp_is_writable( CACHE_DIR ),
+		'htaccess_exists'    => file_exists( CACHE_DIR . '.htaccess' ),
+		'cached_count'       => $cached,
+		'total_count'        => $total,
+		'cache_dir'          => CACHE_DIR,
+	);
+}
+
+/**
+ * ステータス & 診断パネルの HTML を描画。
+ */
+function render_status_panel() {
+	$data = get_diagnostics_data();
+
+	// Cache directory status.
+	if ( $data['cache_dir_writable'] ) {
+		$dir_icon  = 'dashicons-yes-alt';
+		$dir_color = '#00a32a';
+		$dir_text  = __( 'Writable', 'wp-agent-feed' );
+	} elseif ( $data['cache_dir_exists'] ) {
+		$dir_icon  = 'dashicons-dismiss';
+		$dir_color = '#d63638';
+		$dir_text  = __( 'Not writable', 'wp-agent-feed' );
+	} else {
+		$dir_icon  = 'dashicons-dismiss';
+		$dir_color = '#d63638';
+		$dir_text  = __( 'Does not exist', 'wp-agent-feed' );
+	}
+
+	// .htaccess status.
+	if ( $data['htaccess_exists'] ) {
+		$ht_icon  = 'dashicons-yes-alt';
+		$ht_color = '#00a32a';
+		$ht_text  = __( 'Present', 'wp-agent-feed' );
+	} else {
+		$ht_icon  = 'dashicons-dismiss';
+		$ht_color = '#d63638';
+		$ht_text  = __( 'Missing', 'wp-agent-feed' );
+	}
+
+	// Cache coverage status.
+	$cached = $data['cached_count'];
+	$total  = $data['total_count'];
+
+	if ( 0 === $total ) {
+		$cov_icon  = 'dashicons-minus';
+		$cov_color = '#787c82';
+		$cov_text  = __( 'No published posts', 'wp-agent-feed' );
+	} elseif ( $cached >= $total ) {
+		$cov_icon  = 'dashicons-yes-alt';
+		$cov_color = '#00a32a';
+		/* translators: 1: cached count, 2: total count */
+		$cov_text = sprintf( __( '%1$d / %2$d posts cached', 'wp-agent-feed' ), min( $cached, $total ), $total );
+	} elseif ( $cached > 0 ) {
+		$cov_icon  = 'dashicons-warning';
+		$cov_color = '#dba617';
+		/* translators: 1: cached count, 2: total count */
+		$cov_text = sprintf( __( '%1$d / %2$d posts cached', 'wp-agent-feed' ), $cached, $total );
+	} else {
+		$cov_icon  = 'dashicons-dismiss';
+		$cov_color = '#d63638';
+		/* translators: 1: cached count, 2: total count */
+		$cov_text = sprintf( __( '%1$d / %2$d posts cached', 'wp-agent-feed' ), $cached, $total );
+	}
+	?>
+	<h2><?php esc_html_e( 'Status', 'wp-agent-feed' ); ?></h2>
+	<table class="widefat striped" style="max-width: 600px;">
+		<tbody>
+			<tr>
+				<td style="width: 24px;"><span class="dashicons <?php echo esc_attr( $dir_icon ); ?>" style="color: <?php echo esc_attr( $dir_color ); ?>;"></span></td>
+				<td><?php esc_html_e( 'Cache directory', 'wp-agent-feed' ); ?></td>
+				<td><?php echo esc_html( $dir_text ); ?></td>
+			</tr>
+			<tr>
+				<td><span class="dashicons <?php echo esc_attr( $ht_icon ); ?>" style="color: <?php echo esc_attr( $ht_color ); ?>;"></span></td>
+				<td><?php esc_html_e( '.htaccess protection', 'wp-agent-feed' ); ?></td>
+				<td><?php echo esc_html( $ht_text ); ?></td>
+			</tr>
+			<tr>
+				<td><span class="dashicons <?php echo esc_attr( $cov_icon ); ?>" style="color: <?php echo esc_attr( $cov_color ); ?>;"></span></td>
+				<td><?php esc_html_e( 'Cache coverage', 'wp-agent-feed' ); ?></td>
+				<td><?php echo esc_html( $cov_text ); ?></td>
+			</tr>
+		</tbody>
+	</table>
+	<p style="margin-top: 12px;">
+		<button type="button" class="button" id="wp-agent-feed-live-test">
+			<?php esc_html_e( 'Run Live Test', 'wp-agent-feed' ); ?>
+		</button>
+		<span id="wp-agent-feed-live-test-status" style="margin-left: 8px;"></span>
+	</p>
+	<div id="wp-agent-feed-live-test-result" style="display: none; margin-top: 12px;"></div>
+	<?php
+}
+
+/**
  * 設定ページ全体の描画。
  */
 function render_settings_page() {
@@ -810,6 +1028,10 @@ function render_settings_page() {
 	?>
 	<div class="wrap">
 		<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
+
+		<?php render_status_panel(); ?>
+
+		<hr />
 
 		<?php if ( $all_overridden ) : ?>
 			<?php do_settings_sections( 'wp-agent-feed' ); ?>
@@ -846,6 +1068,7 @@ function render_settings_page() {
 		</p>
 
 		<?php render_cache_management_script(); ?>
+		<?php render_diagnostics_script(); ?>
 	</div>
 	<?php
 }
@@ -855,6 +1078,7 @@ function render_settings_page() {
  * ======================================== */
 add_action( 'wp_ajax_wp_agent_feed_regenerate', __NAMESPACE__ . '\ajax_regenerate' );
 add_action( 'wp_ajax_wp_agent_feed_clear', __NAMESPACE__ . '\ajax_clear' );
+add_action( 'wp_ajax_wp_agent_feed_live_test', __NAMESPACE__ . '\ajax_live_test' );
 
 /**
  * AJAX: キャッシュ一括再生成（バッチ処理）。
@@ -903,9 +1127,12 @@ function ajax_regenerate() {
 	$chunk      = array_slice( $ids, $page * $batch_size, $batch_size );
 
 	$processed = 0;
+	$failed    = 0;
 	foreach ( $chunk as $post_id ) {
 		if ( generate_cache( $post_id ) ) {
 			++$processed;
+		} else {
+			++$failed;
 		}
 	}
 
@@ -917,6 +1144,7 @@ function ajax_regenerate() {
 	wp_send_json_success(
 		array(
 			'processed' => $processed,
+			'failed'    => $failed,
 			'done'      => $done,
 		)
 	);
@@ -939,6 +1167,103 @@ function ajax_clear() {
 			/* translators: %d is the number of deleted cache files */
 			'message' => sprintf( __( 'Deleted %d cache files.', 'wp-agent-feed' ), $count ),
 			'count'   => $count,
+		)
+	);
+}
+
+/**
+ * AJAX: ループバックテストで Markdown 配信を検証。
+ */
+function ajax_live_test() {
+	check_ajax_referer( 'wp_agent_feed_cache' );
+
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( __( 'Permission denied.', 'wp-agent-feed' ), 403 );
+	}
+
+	$posts = get_posts(
+		array(
+			'post_type'      => POST_TYPES,
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+			'orderby'        => 'date',
+			'order'          => 'DESC',
+			'fields'         => 'ids',
+		)
+	);
+
+	if ( empty( $posts ) ) {
+		wp_send_json_error(
+			array(
+				'code'    => 'no_posts',
+				'message' => __( 'No published posts found. Publish at least one post to run the live test.', 'wp-agent-feed' ),
+			)
+		);
+	}
+
+	$post_id  = $posts[0];
+	$post_url = get_permalink( $post_id );
+
+	if ( ! $post_url ) {
+		wp_send_json_error(
+			array(
+				'code'    => 'no_permalink',
+				'message' => __( 'Could not resolve permalink for test post.', 'wp-agent-feed' ),
+			)
+		);
+	}
+
+	/** This filter controls SSL verification for the loopback test request. */
+	$sslverify = apply_filters( 'wp_agent_feed_loopback_sslverify', true );
+
+	$response = wp_remote_get(
+		$post_url,
+		array(
+			'headers'   => array( 'Accept' => 'text/markdown' ),
+			'timeout'   => 15,
+			'sslverify' => $sslverify,
+		)
+	);
+
+	if ( is_wp_error( $response ) ) {
+		wp_send_json_error(
+			array(
+				'code'    => 'request_failed',
+				/* translators: %s is the error message */
+				'message' => sprintf( __( 'Loopback request failed: %s', 'wp-agent-feed' ), $response->get_error_message() ),
+				'url'     => $post_url,
+			)
+		);
+	}
+
+	$status_code = wp_remote_retrieve_response_code( $response );
+	$raw_headers = wp_remote_retrieve_headers( $response );
+	$body        = wp_remote_retrieve_body( $response );
+
+	// CaseInsensitiveDictionary → plain array.
+	$headers_array = array();
+	foreach ( $raw_headers as $key => $value ) {
+		$headers_array[ $key ] = $value;
+	}
+
+	$result = validate_loopback_response( $status_code, $headers_array, $body );
+
+	$preview = '';
+	if ( strlen( $body ) > 0 ) {
+		$lines   = explode( "\n", $body );
+		$preview = implode( "\n", array_slice( $lines, 0, 10 ) );
+		if ( count( $lines ) > 10 ) {
+			$preview .= "\n...";
+		}
+	}
+
+	wp_send_json_success(
+		array(
+			'pass'    => $result['pass'],
+			'checks'  => $result['checks'],
+			'url'     => $post_url,
+			'post_id' => $post_id,
+			'preview' => $preview,
 		)
 	);
 }
@@ -1017,14 +1342,14 @@ function render_cache_management_script() {
 					setButtons(false);
 					return;
 				}
-				processBatch(batchId, total, 0, 0, retries);
+				processBatch(batchId, total, 0, 0, retries, 0);
 			}).catch(function() {
 				status.textContent = '<?php echo esc_js( __( 'Request failed.', 'wp-agent-feed' ) ); ?>';
 				setButtons(false);
 			});
 		}
 
-		function processBatch(batchId, total, page, done, retries) {
+		function processBatch(batchId, total, page, done, retries, totalFailed) {
 			var processed = page * 50;
 			status.textContent = processed + ' / ' + total + ' <?php echo esc_js( __( 'processed...', 'wp-agent-feed' ) ); ?>';
 
@@ -1038,11 +1363,18 @@ function render_cache_management_script() {
 					setButtons(false);
 					return;
 				}
+				var batchFailed = json.data.failed || 0;
+				var newTotalFailed = totalFailed + batchFailed;
 				if (json.data.done) {
-					status.textContent = total + ' <?php echo esc_js( __( 'cache files regenerated.', 'wp-agent-feed' ) ); ?>';
+					if (newTotalFailed > 0) {
+						var succeeded = total - newTotalFailed;
+						status.textContent = succeeded + ' <?php echo esc_js( __( 'succeeded,', 'wp-agent-feed' ) ); ?> ' + newTotalFailed + ' <?php echo esc_js( __( 'failed.', 'wp-agent-feed' ) ); ?>';
+					} else {
+						status.textContent = total + ' <?php echo esc_js( __( 'cache files regenerated.', 'wp-agent-feed' ) ); ?>';
+					}
 					setButtons(false);
 				} else {
-					processBatch(batchId, total, page + 1, 0, retries);
+					processBatch(batchId, total, page + 1, 0, retries, newTotalFailed);
 				}
 			}).catch(function() {
 				status.textContent = '<?php echo esc_js( __( 'Request failed.', 'wp-agent-feed' ) ); ?>';
@@ -1067,6 +1399,123 @@ function render_cache_management_script() {
 				setButtons(false);
 			});
 		});
+	})();
+	/* ]]> */
+	</script>
+	<?php
+}
+
+/**
+ * ライブテストボタンの JavaScript を出力。
+ */
+function render_diagnostics_script() {
+	$nonce = wp_create_nonce( 'wp_agent_feed_cache' );
+	?>
+	<script>
+	/* <![CDATA[ */
+	(function() {
+		var ajaxUrl  = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+		var nonce    = <?php echo wp_json_encode( $nonce ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+		var btn      = document.getElementById('wp-agent-feed-live-test');
+		var statusEl = document.getElementById('wp-agent-feed-live-test-status');
+		var resultEl = document.getElementById('wp-agent-feed-live-test-result');
+
+		if (!btn) { return; }
+
+		function escHtml(str) {
+			var div = document.createElement('div');
+			div.appendChild(document.createTextNode(str));
+			return div.innerHTML;
+		}
+
+		function escAttr(str) {
+			return str.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+				.replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+		}
+
+		btn.addEventListener('click', function() {
+			btn.disabled = true;
+			statusEl.textContent = '<?php echo esc_js( __( 'Testing...', 'wp-agent-feed' ) ); ?>';
+			resultEl.style.display = 'none';
+			resultEl.innerHTML = '';
+
+			var data = new FormData();
+			data.append('action', 'wp_agent_feed_live_test');
+			data.append('_ajax_nonce', nonce);
+
+			fetch(ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' })
+				.then(function(r) { return r.json(); })
+				.then(function(json) {
+					btn.disabled = false;
+					statusEl.textContent = '';
+
+					if (!json.success) {
+						renderError(json.data);
+						return;
+					}
+					renderResult(json.data);
+				})
+				.catch(function() {
+					btn.disabled = false;
+					statusEl.textContent = '';
+					renderError({ message: '<?php echo esc_js( __( 'Request failed.', 'wp-agent-feed' ) ); ?>' });
+				});
+		});
+
+		function renderError(data) {
+			var msg = (data && data.message) ? data.message : (data || 'Unknown error');
+			var html = '<div class="notice notice-error inline"><p>' + escHtml(msg) + '</p>';
+			if (data && data.code === 'request_failed') {
+				html += '<p class="description">' +
+					escHtml('<?php echo esc_js( __( 'This may indicate that loopback requests are blocked. Check your server firewall or security plugin settings.', 'wp-agent-feed' ) ); ?>') +
+					'</p>';
+			}
+			html += '</div>';
+			resultEl.innerHTML = html;
+			resultEl.style.display = 'block';
+		}
+
+		function renderResult(data) {
+			var noticeClass = data.pass ? 'notice-success' : 'notice-error';
+			var summaryText = data.pass
+				? '<?php echo esc_js( __( 'All checks passed. Markdown serving is working correctly.', 'wp-agent-feed' ) ); ?>'
+				: '<?php echo esc_js( __( 'Some checks failed.', 'wp-agent-feed' ) ); ?>';
+
+			var html = '<div class="notice ' + noticeClass + ' inline"><p><strong>' +
+				escHtml(summaryText) + '</strong></p></div>';
+
+			html += '<p>' + escHtml('<?php echo esc_js( __( 'Tested URL:', 'wp-agent-feed' ) ); ?>') +
+				' <a href="' + escAttr(data.url) + '" target="_blank" rel="noopener noreferrer">' + escHtml(data.url) + '</a></p>';
+
+			html += '<table class="widefat striped" style="max-width:700px">';
+			html += '<thead><tr><th style="width:24px"></th>';
+			html += '<th>' + escHtml('<?php echo esc_js( __( 'Check', 'wp-agent-feed' ) ); ?>') + '</th>';
+			html += '<th>' + escHtml('<?php echo esc_js( __( 'Expected', 'wp-agent-feed' ) ); ?>') + '</th>';
+			html += '<th>' + escHtml('<?php echo esc_js( __( 'Actual', 'wp-agent-feed' ) ); ?>') + '</th>';
+			html += '</tr></thead><tbody>';
+
+			for (var i = 0; i < data.checks.length; i++) {
+				var c = data.checks[i];
+				var icon = c.pass
+					? '<span class="dashicons dashicons-yes-alt" style="color:#00a32a"></span>'
+					: '<span class="dashicons dashicons-dismiss" style="color:#d63638"></span>';
+				html += '<tr><td>' + icon + '</td>';
+				html += '<td>' + escHtml(c.name) + '</td>';
+				html += '<td>' + escHtml(c.expect) + '</td>';
+				html += '<td><code>' + escHtml(c.actual) + '</code></td></tr>';
+			}
+			html += '</tbody></table>';
+
+			if (data.preview) {
+				html += '<details style="margin-top:12px">';
+				html += '<summary>' + escHtml('<?php echo esc_js( __( 'Response Preview', 'wp-agent-feed' ) ); ?>') + '</summary>';
+				html += '<pre style="background:#f0f0f1;padding:12px;overflow-x:auto;max-height:300px;margin-top:8px"><code>' +
+					escHtml(data.preview) + '</code></pre></details>';
+			}
+
+			resultEl.innerHTML = html;
+			resultEl.style.display = 'block';
+		}
 	})();
 	/* ]]> */
 	</script>
