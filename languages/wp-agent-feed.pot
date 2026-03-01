@@ -94,3 +94,108 @@ msgstr ""
 #: wp-agent-feed.php
 msgid "Clearing..."
 msgstr ""
+
+#: wp-agent-feed.php
+msgid "Settings"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Status"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Writable"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Not writable"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Does not exist"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Present"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Missing"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "No published posts"
+msgstr ""
+
+#. translators: 1: cached count, 2: total count
+#: wp-agent-feed.php
+msgid "%1$d / %2$d posts cached"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Cache directory"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid ".htaccess protection"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Cache coverage"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Verify Output"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Verifying..."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "All checks passed. Markdown output is correct."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Some checks failed."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Tested post:"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "No published posts found. Publish at least one post to run the test."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Cache generation failed. Check that the cache directory is writable."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Failed to read the generated cache file."
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Check"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Expected"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Actual"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "Response Preview"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "succeeded,"
+msgstr ""
+
+#: wp-agent-feed.php
+msgid "failed."
+msgstr ""

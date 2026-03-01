@@ -13,6 +13,8 @@ use function WpAgentFeed\is_overridden;
 use function WpAgentFeed\clear_all_cache;
 use function WpAgentFeed\robots_disallow_path;
 use function WpAgentFeed\filter_robots_txt;
+use function WpAgentFeed\get_cache_stats;
+use function WpAgentFeed\validate_markdown_output;
 use const WpAgentFeed\CACHE_DIR;
 
 /**
@@ -554,5 +556,124 @@ final class FunctionsTest extends TestCase {
 		$input  = "User-agent: *\r\nDisallow: /wp-content/cache/markdown/\r\n";
 		$output = filter_robots_txt( $input, 1 );
 		$this->assertSame( 1, substr_count( $output, 'Disallow: /wp-content/cache/markdown/' ) );
+	}
+
+	// =========================================================
+	// get_cache_stats()
+	// =========================================================
+
+	#[Test]
+	public function get_cache_stats_nonexistent_dir(): void {
+		$this->assertSame( 0, get_cache_stats( '/nonexistent/path/' ) );
+	}
+
+	#[Test]
+	public function get_cache_stats_empty_dir(): void {
+		$dir = CACHE_DIR;
+		if ( ! is_dir( $dir ) ) {
+			mkdir( $dir, 0755, true );
+		}
+		// Remove any existing .md files.
+		foreach ( glob( $dir . '*.md' ) ?: array() as $f ) {
+			unlink( $f );
+		}
+
+		$this->assertSame( 0, get_cache_stats( $dir ) );
+	}
+
+	#[Test]
+	public function get_cache_stats_counts_numeric_md_only(): void {
+		$dir = CACHE_DIR;
+		if ( ! is_dir( $dir ) ) {
+			mkdir( $dir, 0755, true );
+		}
+		file_put_contents( $dir . '1.md', 'test' );
+		file_put_contents( $dir . '42.md', 'test' );
+		file_put_contents( $dir . 'readme.md', 'not a cache file' );
+		file_put_contents( $dir . 'other.txt', 'not markdown' );
+
+		$this->assertSame( 2, get_cache_stats( $dir ) );
+
+		unlink( $dir . '1.md' );
+		unlink( $dir . '42.md' );
+		unlink( $dir . 'readme.md' );
+		unlink( $dir . 'other.txt' );
+	}
+
+	// =========================================================
+	// validate_markdown_output()
+	// =========================================================
+
+	#[Test]
+	public function validate_markdown_output_all_pass(): void {
+		$result = validate_markdown_output(
+			"---\ntitle: \"Test\"\n---\n\n# Hello\n",
+			'ai-train=no, search=yes, ai-input=yes'
+		);
+		$this->assertTrue( $result['pass'] );
+		foreach ( $result['checks'] as $check ) {
+			$this->assertTrue( $check['pass'], "Check '{$check['name']}' should pass" );
+		}
+	}
+
+	#[Test]
+	public function validate_markdown_output_empty_body(): void {
+		$result = validate_markdown_output( '', 'test' );
+		$this->assertFalse( $result['pass'] );
+	}
+
+	#[Test]
+	public function validate_markdown_output_no_frontmatter(): void {
+		$result = validate_markdown_output(
+			'# Just a heading without frontmatter',
+			'test'
+		);
+		$this->assertFalse( $result['pass'] );
+		$frontmatter_check = null;
+		foreach ( $result['checks'] as $c ) {
+			if ( 'frontmatter' === $c['name'] ) {
+				$frontmatter_check = $c;
+				break;
+			}
+		}
+		$this->assertNotNull( $frontmatter_check );
+		$this->assertFalse( $frontmatter_check['pass'] );
+	}
+
+	#[Test]
+	public function validate_markdown_output_empty_content_signal(): void {
+		$result = validate_markdown_output(
+			"---\ntitle: \"Test\"\n---\n\n# Hello\n",
+			''
+		);
+		$this->assertFalse( $result['pass'] );
+		$signal_check = null;
+		foreach ( $result['checks'] as $c ) {
+			if ( 'content_signal' === $c['name'] ) {
+				$signal_check = $c;
+				break;
+			}
+		}
+		$this->assertNotNull( $signal_check );
+		$this->assertFalse( $signal_check['pass'] );
+	}
+
+	#[Test]
+	public function validate_markdown_output_has_token_estimate(): void {
+		$result = validate_markdown_output(
+			"---\ntitle: \"Test\"\n---\n\n# Hello World\n",
+			'test'
+		);
+		$this->assertTrue( $result['pass'] );
+		$token_check = null;
+		foreach ( $result['checks'] as $c ) {
+			if ( 'token_estimate' === $c['name'] ) {
+				$token_check = $c;
+				break;
+			}
+		}
+		$this->assertNotNull( $token_check );
+		$this->assertTrue( $token_check['pass'] );
+		$this->assertGreaterThan( 0, (int) $token_check['actual'] );
 	}
 }
