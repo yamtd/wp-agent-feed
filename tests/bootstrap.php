@@ -33,6 +33,12 @@ if ( ! function_exists( 'add_action' ) ) {
 if ( ! function_exists( 'register_uninstall_hook' ) ) {
 	function register_uninstall_hook() {} // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 }
+if ( ! function_exists( 'add_filter' ) ) {
+	function add_filter() {} // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+}
+if ( ! function_exists( 'plugin_basename' ) ) {
+	function plugin_basename( $file ) { return basename( dirname( $file ) ) . '/' . basename( $file ); } // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+}
 if ( ! function_exists( 'get_option' ) ) {
 	function get_option( $option, $default = false ) { return $default; } // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 }

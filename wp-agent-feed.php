@@ -571,6 +571,20 @@ if ( defined( 'WP_CLI' ) && \WP_CLI ) {
  * ======================================== */
 add_action( 'admin_menu', __NAMESPACE__ . '\add_admin_menu' );
 add_action( 'admin_init', __NAMESPACE__ . '\register_settings' );
+add_filter( 'plugin_action_links_' . plugin_basename( __FILE__ ), __NAMESPACE__ . '\add_settings_link' );
+
+/**
+ * プラグイン一覧に設定ページへのリンクを追加。
+ *
+ * @param array $links Existing action links.
+ * @return array Modified action links.
+ */
+function add_settings_link( $links ) {
+	$url           = admin_url( 'options-general.php?page=wp-agent-feed' );
+	$settings_link = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Settings', 'wp-agent-feed' ) . '</a>';
+	array_unshift( $links, $settings_link );
+	return $links;
+}
 
 /**
  * 管理メニューに設定ページを追加。
