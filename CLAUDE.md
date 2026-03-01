@@ -82,6 +82,7 @@ npx @wordpress/env stop
 | `add_admin_menu()` | Settings メニューにページ追加 | Yes |
 | `register_settings()` | Settings API 登録 | Yes |
 | `sanitize_content_signal()` | Content-Signal サニタイズ | Yes |
+| `sanitize_cache_control()` | Cache-Control サニタイズ | Yes |
 | `sanitize_post_types()` | Post Types サニタイズ | Yes |
 | `get_diagnostics_data()` | ステータス診断データ収集 | Yes |
 | `render_status_panel()` | ステータスパネル描画 | Yes |

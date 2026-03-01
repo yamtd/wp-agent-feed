@@ -41,8 +41,16 @@ msgid "Defined in wp-config.php. Remove the constant to manage this setting here
 msgstr "wp-config.php で定義されています。この設定をここで管理するには、定数を削除してください。"
 
 #: wp-agent-feed.php
+msgid "Cache-Control"
+msgstr "Cache-Control"
+
+#: wp-agent-feed.php
 msgid "The Content-Signal header value sent with Markdown responses."
 msgstr "Markdown レスポンスに付与される Content-Signal ヘッダーの値。"
+
+#: wp-agent-feed.php
+msgid "The Cache-Control header value sent with Markdown responses. Leave empty to not send this header."
+msgstr "Markdown レスポンスに付与される Cache-Control ヘッダーの値。空にするとヘッダーを送信しません。"
 
 #: wp-agent-feed.php
 msgid "Cache Management"
