@@ -17,7 +17,7 @@ if ( ! defined( 'WP_CONTENT_DIR' ) ) {
 // Plugin constants — define before loading the plugin so
 // the if-not-defined blocks are satisfied.
 if ( ! defined( 'WpAgentFeed\CACHE_DIR' ) ) {
-	define( 'WpAgentFeed\CACHE_DIR', sys_get_temp_dir() . '/waf-test-cache/' );
+	define( 'WpAgentFeed\CACHE_DIR', ABSPATH . 'wp-content/cache/markdown/' );
 }
 if ( ! defined( 'WpAgentFeed\POST_TYPES' ) ) {
 	define( 'WpAgentFeed\POST_TYPES', [ 'post', 'page' ] );

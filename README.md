@@ -17,17 +17,21 @@ wp-content/plugins/wp-agent-feed/wp-agent-feed.php
 
 に配置し、管理画面 > プラグインから「WP Agent Feed」を有効化。
 
-### Nginx の場合
+### キャッシュディレクトリの保護
 
-Apache では .htaccess で自動保護されるが、Nginx の場合はキャッシュディレクトリへの
-直接アクセスをブロックする設定を追加する:
+- **Apache**: `.htaccess` で直接アクセスを自動ブロック（プラグインが生成）
+- **クローラー**: `robots.txt` に `Disallow` ルールを自動追加（SEO 重複コンテンツ対策）
+- **Nginx**: `robots.txt` による保護は自動適用される。直接アクセスもブロックしたい場合は以下を任意で追加:
 
-```nginx
-location ~* ^/wp-content/cache/markdown/ {
-    deny all;
-    return 403;
-}
-```
+  ```nginx
+  location ~* ^/wp-content/cache/markdown/ {
+      deny all;
+      return 403;
+  }
+  ```
+
+> **注意**: キャッシュファイルの内容は公開済み投稿の Markdown 変換です。
+> `robots.txt` は主要検索エンジンのクローラーに対して有効ですが、直接アクセスをブロックするものではありません。
 
 ## 動作確認
 
