@@ -9,6 +9,7 @@
 /composer.lock      export-ignore
 /phpunit.xml.dist   export-ignore
 /tests/             export-ignore
+/.github/           export-ignore
 
 # Binary files
 languages/*.mo binary

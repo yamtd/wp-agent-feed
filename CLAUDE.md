@@ -90,6 +90,8 @@ npx @wordpress/env stop
 | `ajax_regenerate()` | AJAX キャッシュ一括再生成 | Yes |
 | `ajax_clear()` | AJAX キャッシュ全削除 | Yes |
 | `ajax_live_test()` | AJAX 出力検証テスト | Yes |
+| `ajax_check_headers()` | AJAX HTTP ヘッダー確認 | Yes |
+| `check_github_update()` | GitHub 自動更新チェック | Yes |
 | `uninstall()` | プラグイン削除時クリーンアップ | Yes |
 
 ## 配布方式

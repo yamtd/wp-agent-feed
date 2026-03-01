@@ -5,8 +5,11 @@
  * Description: Accept: text/markdown ヘッダー付きリクエストに対して、投稿コンテンツをMarkdownで返す。保存時に静的キャッシュを生成するパフォーマンス重視設計。
  * Version: 0.3.0
  * Requires PHP: 7.4
+ * Author: Yamada Tadaaki
+ * Author URI: https://github.com/yamtd
  * License: GPL-2.0-or-later
  * Text Domain: wp-agent-feed
+ * Update URI: https://github.com/yamtd/wp-agent-feed
  */
 
 namespace WpAgentFeed;
@@ -1722,6 +1725,111 @@ function render_diagnostics_script() {
 }
 
 /* ========================================
+ * GitHub 自動更新（WP 5.8+）
+ * ======================================== */
+add_filter( 'update_plugins_github.com', __NAMESPACE__ . '\check_github_update', 10, 4 );
+
+/**
+ * GitHub Releases から最新バージョンを確認し、更新情報を返す。
+ *
+ * WP 5.8+ の Update URI 機構を利用。5.8 未満ではフィルターが存在しないため無視される。
+ *
+ * @param array|false $update     The plugin update data.
+ * @param array       $plugin_data Plugin headers (Version, UpdateURI, etc.).
+ * @param string      $plugin_file Plugin file path relative to plugins dir.
+ * @param string[]    $locales     Installed locales.
+ * @return array|false Update data or false if no update available.
+ */
+function check_github_update( $update, $plugin_data, $plugin_file, $locales ) {
+	if ( plugin_basename( __FILE__ ) !== $plugin_file ) {
+		return $update;
+	}
+
+	if ( ! empty( $update ) ) {
+		return $update;
+	}
+
+	$cached = get_transient( 'wp_agent_feed_gh_update' );
+
+	if ( false !== $cached ) {
+		if ( isset( $cached['no_update'] ) ) {
+			return false;
+		}
+
+		// 更新済みならキャッシュを破棄。
+		if ( ! version_compare( $cached['version'], $plugin_data['Version'], '>' ) ) {
+			delete_transient( 'wp_agent_feed_gh_update' );
+			return false;
+		}
+
+		return array(
+			'slug'    => 'wp-agent-feed',
+			'version' => $cached['version'],
+			'url'     => $cached['url'],
+			'package' => $cached['package'],
+		);
+	}
+
+	$response = wp_remote_get(
+		'https://api.github.com/repos/yamtd/wp-agent-feed/releases/latest',
+		array(
+			'timeout' => 10,
+			'headers' => array(
+				'Accept'     => 'application/vnd.github.v3+json',
+				'User-Agent' => 'WordPress/wp-agent-feed',
+			),
+		)
+	);
+
+	if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+		return false;
+	}
+
+	$release = json_decode( wp_remote_retrieve_body( $response ), true );
+
+	if ( ! is_array( $release ) || empty( $release['tag_name'] ) ) {
+		return false;
+	}
+
+	$remote_version = ltrim( $release['tag_name'], 'v' );
+
+	// ZIP アセットを検索。
+	$zip_url = '';
+	if ( ! empty( $release['assets'] ) && is_array( $release['assets'] ) ) {
+		foreach ( $release['assets'] as $asset ) {
+			if ( ! empty( $asset['browser_download_url'] ) && '.zip' === substr( $asset['browser_download_url'], -4 ) ) {
+				$zip_url = $asset['browser_download_url'];
+				break;
+			}
+		}
+	}
+
+	if ( '' === $zip_url ) {
+		return false;
+	}
+
+	if ( ! version_compare( $remote_version, $plugin_data['Version'], '>' ) ) {
+		set_transient( 'wp_agent_feed_gh_update', array( 'no_update' => true ), 12 * HOUR_IN_SECONDS );
+		return false;
+	}
+
+	$data = array(
+		'version' => $remote_version,
+		'url'     => $release['html_url'],
+		'package' => $zip_url,
+	);
+
+	set_transient( 'wp_agent_feed_gh_update', $data, 12 * HOUR_IN_SECONDS );
+
+	return array(
+		'slug'    => 'wp-agent-feed',
+		'version' => $data['version'],
+		'url'     => $data['url'],
+		'package' => $data['package'],
+	);
+}
+
+/* ========================================
  * アンインストール処理
  * ======================================== */
 
@@ -1768,4 +1876,5 @@ function uninstall() {
 	delete_option( 'wp_agent_feed_content_signal' );
 	delete_option( 'wp_agent_feed_post_types' );
 	delete_option( 'wp_agent_feed_cache_control' );
+	delete_transient( 'wp_agent_feed_gh_update' );
 }
