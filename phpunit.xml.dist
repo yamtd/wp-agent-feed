@@ -15,6 +15,7 @@
 	<source>
 		<include>
 			<file>wp-agent-feed.php</file>
+			<directory>includes</directory>
 		</include>
 	</source>
 </phpunit>
