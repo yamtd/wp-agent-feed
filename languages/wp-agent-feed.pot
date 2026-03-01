@@ -133,6 +133,10 @@ msgid "%1$d / %2$d posts cached"
 msgstr ""
 
 #: wp-agent-feed.php
+msgid "Site URL (loopback target)"
+msgstr ""
+
+#: wp-agent-feed.php
 msgid "Cache directory"
 msgstr ""
 

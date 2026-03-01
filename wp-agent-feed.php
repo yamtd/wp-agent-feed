@@ -990,6 +990,11 @@ function render_status_panel() {
 	<table class="widefat striped" style="max-width: 600px;">
 		<tbody>
 			<tr>
+				<td style="width: 24px;"><span class="dashicons dashicons-admin-links" style="color: #787c82;"></span></td>
+				<td><?php esc_html_e( 'Site URL (loopback target)', 'wp-agent-feed' ); ?></td>
+				<td><code><?php echo esc_html( site_url() ); ?></code></td>
+			</tr>
+			<tr>
 				<td style="width: 24px;"><span class="dashicons <?php echo esc_attr( $dir_icon ); ?>" style="color: <?php echo esc_attr( $dir_color ); ?>;"></span></td>
 				<td><?php esc_html_e( 'Cache directory', 'wp-agent-feed' ); ?></td>
 				<td><?php echo esc_html( $dir_text ); ?></td>
@@ -1468,6 +1473,10 @@ function render_diagnostics_script() {
 		function renderError(data) {
 			var msg = (data && data.message) ? data.message : (data || 'Unknown error');
 			var html = '<div class="notice notice-error inline"><p>' + escHtml(msg) + '</p>';
+			if (data && data.url) {
+				html += '<p>' + escHtml('<?php echo esc_js( __( 'Tested URL:', 'wp-agent-feed' ) ); ?>') +
+					' <code>' + escHtml(data.url) + '</code></p>';
+			}
 			if (data && data.code === 'request_failed') {
 				html += '<p class="description">' +
 					escHtml('<?php echo esc_js( __( 'This may indicate that loopback requests are blocked. Check your server firewall or security plugin settings.', 'wp-agent-feed' ) ); ?>') +
