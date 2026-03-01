@@ -18,10 +18,12 @@ jobs:
         run: |
           mkdir wp-agent-feed
           cp wp-agent-feed.php wp-agent-feed/
+          cp -r includes wp-agent-feed/
           cp -r languages wp-agent-feed/
           cp LICENSE wp-agent-feed/
           cp README.md wp-agent-feed/
           zip -r wp-agent-feed.zip wp-agent-feed/
+          unzip -l wp-agent-feed.zip | grep includes/
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2

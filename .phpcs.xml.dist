@@ -2,8 +2,9 @@
 <ruleset name="WP Agent Feed">
 	<description>PHPCS rules for WP Agent Feed plugin.</description>
 
-	<!-- Scan plugin file only -->
+	<!-- Scan plugin files -->
 	<file>./wp-agent-feed.php</file>
+	<file>./includes/</file>
 
 	<!-- Exclude vendor and tests -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>

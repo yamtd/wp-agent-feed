@@ -42,6 +42,9 @@ if ( ! function_exists( 'plugin_basename' ) ) {
 if ( ! function_exists( 'get_option' ) ) {
 	function get_option( $option, $default = false ) { return $default; } // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
 }
+if ( ! function_exists( 'is_admin' ) ) {
+	function is_admin() { return false; } // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedFunctionFound
+}
 
 // Load the plugin.
 require_once dirname( __DIR__ ) . '/wp-agent-feed.php';
