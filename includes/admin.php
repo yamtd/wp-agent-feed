@@ -133,7 +133,7 @@ function register_settings() {
  * @return string Sanitized value.
  */
 function sanitize_content_signal( $value ) {
-	$value = sanitize_text_field( $value );
+	$value = normalize_header_value( $value );
 	if ( '' === $value ) {
 		return 'ai-train=no, search=yes, ai-input=yes';
 	}
@@ -147,8 +147,7 @@ function sanitize_content_signal( $value ) {
  * @return string Sanitized value (empty string disables the header).
  */
 function sanitize_cache_control( $value ) {
-	$value = sanitize_text_field( $value );
-	return str_replace( array( "\r", "\n" ), '', $value );
+	return normalize_header_value( $value );
 }
 
 /**
@@ -751,11 +750,12 @@ function ajax_live_test() {
 		'Content-Type'      => 'text/markdown; charset=utf-8',
 		'Vary'              => 'Accept',
 		'X-Markdown-Tokens' => (string) $token_count,
-		'Content-Signal'    => CONTENT_SIGNAL,
+		'Content-Signal'    => normalize_header_value( CONTENT_SIGNAL ),
 		'Content-Length'    => (string) strlen( $body ),
 	);
-	if ( CACHE_CONTROL !== '' ) {
-		$headers['Cache-Control'] = CACHE_CONTROL;
+	$cache_control = normalize_header_value( CACHE_CONTROL );
+	if ( '' !== $cache_control ) {
+		$headers['Cache-Control'] = $cache_control;
 	}
 
 	wp_send_json_success(

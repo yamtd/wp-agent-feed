@@ -37,7 +37,7 @@ if ( ! defined( __NAMESPACE__ . '\POST_TYPES' ) ) {
 if ( ! defined( __NAMESPACE__ . '\CONTENT_SIGNAL' ) ) {
 	define(
 		__NAMESPACE__ . '\CONTENT_SIGNAL',
-		get_option( 'wp_agent_feed_content_signal', 'ai-train=no, search=yes, ai-input=yes' )
+		normalize_header_value( get_option( 'wp_agent_feed_content_signal', 'ai-train=no, search=yes, ai-input=yes' ) )
 			?: 'ai-train=no, search=yes, ai-input=yes'
 	);
 } else {
@@ -46,7 +46,7 @@ if ( ! defined( __NAMESPACE__ . '\CONTENT_SIGNAL' ) ) {
 if ( ! defined( __NAMESPACE__ . '\CACHE_CONTROL' ) ) {
 	define(
 		__NAMESPACE__ . '\CACHE_CONTROL',
-		get_option( 'wp_agent_feed_cache_control', 'public, max-age=3600' )
+		normalize_header_value( get_option( 'wp_agent_feed_cache_control', 'public, max-age=3600' ) )
 	);
 } else {
 	is_overridden( 'CACHE_CONTROL', true );
@@ -101,10 +101,11 @@ function serve_markdown() {
 	header( 'Content-Type: text/markdown; charset=utf-8' );
 	header( 'Vary: Accept' );
 	header( 'X-Markdown-Tokens: ' . $token_count );
-	header( 'Content-Signal: ' . CONTENT_SIGNAL );
+	header( 'Content-Signal: ' . normalize_header_value( CONTENT_SIGNAL ) );
 	header( 'Content-Length: ' . strlen( $markdown ) );
-	if ( CACHE_CONTROL !== '' ) {
-		header( 'Cache-Control: ' . CACHE_CONTROL );
+	$cache_control = normalize_header_value( CACHE_CONTROL );
+	if ( '' !== $cache_control ) {
+		header( 'Cache-Control: ' . $cache_control );
 	}
 
 	echo $markdown;
@@ -450,11 +451,12 @@ function validate_markdown_output( $body, $content_signal ) {
 	);
 
 	// 4. Content-Signal configured.
-	$checks[] = array(
+	$normalized_content_signal = normalize_header_value( $content_signal );
+	$checks[]                 = array(
 		'name'   => 'content_signal',
-		'pass'   => '' !== $content_signal,
+		'pass'   => '' !== $normalized_content_signal,
 		'expect' => 'non-empty',
-		'actual' => '' !== $content_signal ? $content_signal : '(empty)',
+		'actual' => '' !== $normalized_content_signal ? $normalized_content_signal : '(empty)',
 	);
 
 	$pass = true;
@@ -659,6 +661,18 @@ function check_github_update( $update, $plugin_data, $plugin_file, $locales ) {
 		'url'     => $data['url'],
 		'package' => $data['package'],
 	);
+}
+
+/**
+ * HTTPヘッダー値を安全な1行文字列へ正規化。
+ *
+ * @param mixed $value Raw value.
+ * @return string Sanitized single-line header value.
+ */
+function normalize_header_value( $value ) {
+	$header = sanitize_text_field( (string) $value );
+	$header = str_replace( array( "\r", "\n" ), '', $header );
+	return trim( $header );
 }
 
 /* ========================================
