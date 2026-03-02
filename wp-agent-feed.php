@@ -3,7 +3,7 @@
  * Plugin Name: WP Agent Feed
  * Plugin URI: https://github.com/yamtd/wp-agent-feed
  * Description: Accept: text/markdown ヘッダー付きリクエストに対して、投稿コンテンツをMarkdownで返す。保存時に静的キャッシュを生成するパフォーマンス重視設計。
- * Version: 0.4.2
+ * Version: 0.5.0
  * Requires PHP: 7.4
  * Author: Yamada Tadaaki
  * Author URI: https://github.com/yamtd
@@ -244,7 +244,7 @@ function get_rendered_content( $post ) {
  * ======================================== */
 function build_frontmatter( $post ) {
 	$title       = $post->post_title;
-	$description = get_the_excerpt( $post );
+	$description = get_description( $post );
 	$url         = get_permalink( $post );
 	$date        = get_the_date( 'Y-m-d', $post );
 	$modified    = get_the_modified_date( 'Y-m-d', $post );
@@ -267,6 +267,41 @@ function build_frontmatter( $post ) {
 	$lines[] = '';
 
 	return implode( "\n", $lines );
+}
+
+/**
+ * Get the meta description for a post. (Beta)
+ *
+ * Checks SEO plugin post meta first, falls back to the excerpt.
+ * Supported: SEO SIMPLE PACK, Yoast SEO, All in One SEO, SEOPress, Rank Math.
+ *
+ * @since 0.5.0 Beta — supported plugin list may change.
+ * @param WP_Post $post Post object.
+ * @return string
+ */
+function get_description( $post ) {
+	$meta_keys = array(
+		'ssp_meta_description',       // SEO SIMPLE PACK
+		'_yoast_wpseo_metadesc',      // Yoast SEO
+		'_aioseo_description',        // All in One SEO
+		'_seopress_titles_desc',      // SEOPress
+		'rank_math_description',      // Rank Math
+	);
+
+	$description = '';
+	foreach ( $meta_keys as $key ) {
+		$value = trim( (string) get_post_meta( $post->ID, $key, true ) );
+		if ( '' !== $value ) {
+			$description = $value;
+			break;
+		}
+	}
+
+	if ( empty( $description ) ) {
+		$description = get_the_excerpt( $post );
+	}
+
+	return apply_filters( 'wp_agent_feed_description', $description, $post );
 }
 
 /* ========================================

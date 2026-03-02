@@ -120,6 +120,10 @@ IETF の [AIPREF ワーキンググループ](https://datatracker.ietf.org/doc/d
 
 ## 注意事項
 
+- **SEO メタディスクリプション対応（Beta）** — フロントマターの `description` は SEO プラグインのメタディスクリプションを優先的に使用する。
+  対応プラグイン: SEO SIMPLE PACK / Yoast SEO / All in One SEO / SEOPress / Rank Math。
+  未対応プラグインは `wp_agent_feed_description` フィルターでカスタマイズ可能。
+  対応プラグインの一覧は今後変更される可能性がある。
 - HTML→Markdown変換はWordPressの `the_content` 出力（標準的なブロック要素）に最適化。
   カスタムショートコードや複雑なネストされたテーブルは完全に変換されない場合がある。
 - ネストされたリスト（`<ul>` / `<ol>` の入れ子）やネストされた `<blockquote>` は

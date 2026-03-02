@@ -75,6 +75,7 @@ npx @wordpress/env stop
 | `generate_cache()` | `wp-agent-feed.php` | Markdown ファイル生成 | Yes |
 | `get_rendered_content()` | `wp-agent-feed.php` | the_content フィルター適用 | Yes |
 | `build_frontmatter()` | `wp-agent-feed.php` | YAML フロントマター生成 | Yes |
+| `get_description()` | `wp-agent-feed.php` | SEO メタ description 取得（フォールバック: 抜粋） | Yes |
 | `is_overridden()` | `wp-agent-feed.php` | wp-config.php オーバーライド検出 | No |
 | `cache_path()` | `wp-agent-feed.php` | キャッシュファイルパス生成 | No |
 | `delete_cache()` | `wp-agent-feed.php` | キャッシュファイル削除 | No |
