@@ -214,17 +214,17 @@ function render_field_content_signal() {
 	printf(
 		' <button type="button" class="use-recommended" data-target="wp_agent_feed_content_signal" data-value="%s">%s</button>',
 		esc_attr( $default ),
-		esc_html__( 'Use recommended', 'wp-agent-feed' )
+		esc_html__( 'Use initial value', 'wp-agent-feed' )
 	);
 	echo '<p class="description">';
 	esc_html_e(
-		'This HTTP header signals your preferences for how AI agents may use your content. Compliance is voluntary, similar to robots.txt.',
+		'This HTTP header declares your preferences for how AI agents may use your content. Compliance depends on each service.',
 		'wp-agent-feed'
 	);
 	echo '<br>';
 	printf(
-		/* translators: %s is the default value */
-		esc_html__( 'Default: %s', 'wp-agent-feed' ),
+		/* translators: %s is the initial value */
+		esc_html__( 'Initial value: %s', 'wp-agent-feed' ),
 		'<code>' . esc_html( $default ) . '</code>'
 	);
 	echo '</p>';
@@ -233,15 +233,15 @@ function render_field_content_signal() {
 	echo '<table class="directive-table"><tbody>';
 	printf(
 		'<tr><td><code>ai-train=no</code></td><td>%s</td></tr>',
-		esc_html__( 'Request no AI training', 'wp-agent-feed' )
+		esc_html__( 'Do not use for model training', 'wp-agent-feed' )
 	);
 	printf(
 		'<tr><td><code>search=yes</code></td><td>%s</td></tr>',
-		esc_html__( 'Search indexing acceptable', 'wp-agent-feed' )
+		esc_html__( 'Allow use in search snippets', 'wp-agent-feed' )
 	);
 	printf(
 		'<tr><td><code>ai-input=yes</code></td><td>%s</td></tr>',
-		esc_html__( 'AI assistant reference acceptable', 'wp-agent-feed' )
+		esc_html__( 'Allow use in AI-generated answers', 'wp-agent-feed' )
 	);
 	echo '</tbody></table>';
 	echo '</details>';
@@ -290,7 +290,7 @@ function render_field_cache_control() {
 	echo '<table class="directive-table"><tbody>';
 	printf(
 		'<tr><td><code>public</code></td><td>%s</td></tr>',
-		esc_html__( 'Allow CDN and proxy caches', 'wp-agent-feed' )
+		esc_html__( 'Allow CDN and proxy caches (safe — Markdown responses contain only published content)', 'wp-agent-feed' )
 	);
 	printf(
 		'<tr><td><code>private</code></td><td>%s</td></tr>',

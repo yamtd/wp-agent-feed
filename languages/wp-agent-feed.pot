@@ -46,7 +46,7 @@ msgid "Cache-Control"
 msgstr ""
 
 #: includes/admin.php
-msgid "This HTTP header signals your preferences for how AI agents may use your content. Compliance is voluntary, similar to robots.txt."
+msgid "This HTTP header declares your preferences for how AI agents may use your content. Compliance depends on each service."
 msgstr ""
 
 #: includes/admin.php
@@ -54,24 +54,24 @@ msgid "What each value means"
 msgstr ""
 
 #: includes/admin.php
-msgid "Request no AI training"
+msgid "Do not use for model training"
 msgstr ""
 
 #: includes/admin.php
-msgid "Search indexing acceptable"
+msgid "Allow use in search snippets"
 msgstr ""
 
 #: includes/admin.php
-msgid "AI assistant reference acceptable"
+msgid "Allow use in AI-generated answers"
 msgstr ""
 
 #: includes/admin.php
 msgid "Controls how long browsers and CDNs may cache the Markdown response. Leave empty to let the server decide."
 msgstr ""
 
-#. translators: %s is the default value
+#. translators: %s is the initial value
 #: includes/admin.php
-msgid "Default: %s"
+msgid "Initial value: %s"
 msgstr ""
 
 #. translators: %s is the recommended value
@@ -80,11 +80,15 @@ msgid "Recommended: %s"
 msgstr ""
 
 #: includes/admin.php
+msgid "Use initial value"
+msgstr ""
+
+#: includes/admin.php
 msgid "Use recommended"
 msgstr ""
 
 #: includes/admin.php
-msgid "Allow CDN and proxy caches"
+msgid "Allow CDN and proxy caches (safe — Markdown responses contain only published content)"
 msgstr ""
 
 #: includes/admin.php
