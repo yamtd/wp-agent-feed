@@ -106,12 +106,12 @@ IETF の [AIPREF ワーキンググループ](https://datatracker.ietf.org/doc/d
 
 | 値 | 意味 |
 |---|---|
-| `ai-train=no` | AI モデルの学習に使用しないよう要請 |
-| `search=yes` | 検索インデックスへの利用を許容 |
-| `ai-input=yes` | AI アシスタントの参照（RAG 等）を許容 |
+| `ai-train=no` | モデルの学習に使用しないよう要請 |
+| `search=yes` | 検索スニペットへの利用を許容 |
+| `ai-input=yes` | AI 生成回答での利用を許容 |
 
-> **重要**: robots.txt と同様に、これは**意思表示（preference）**であり、技術的な強制力はありません。
-> AI クローラーがこのヘッダーを尊重するかどうかは各サービスの実装に依存します。
+> **重要**: これは**意思表示（preference）**であり、技術的な強制力はありません。
+> 準拠するかどうかは各サービスの実装に依存します。
 
 参考:
 - [Content Signals Policy — Cloudflare Blog](https://blog.cloudflare.com/content-signals-policy/)
@@ -124,7 +124,7 @@ IETF の [AIPREF ワーキンググループ](https://datatracker.ietf.org/doc/d
   カスタムショートコードや複雑なネストされたテーブルは完全に変換されない場合がある。
 - ネストされたリスト（`<ul>` / `<ol>` の入れ子）やネストされた `<blockquote>` は
   正しく階層化されない場合がある。単一階層のリスト・引用は正常に変換される。
-- `Content-Signal` のデフォルトは `ai-train=no`（AI 学習への利用を望まないことを通知）。
+- `Content-Signal` の初期値は `ai-train=no`（AI 学習への利用を望まないことを通知）。
   ポリシーに合わせて変更のこと。
 - プラグイン**無効化**時、キャッシュディレクトリは削除されない。
   管理画面から**削除**した場合はキャッシュファイル・DB オプションが自動クリーンアップされる。

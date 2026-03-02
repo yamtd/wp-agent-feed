@@ -49,33 +49,33 @@ msgid "Cache-Control"
 msgstr "Cache-Control"
 
 #: includes/admin.php
-msgid "This HTTP header signals your preferences for how AI agents may use your content. Compliance is voluntary, similar to robots.txt."
-msgstr "この HTTP ヘッダーは、AI エージェントに対してコンテンツの利用に関する希望を伝えます。robots.txt と同様に、準拠は任意です。"
+msgid "This HTTP header declares your preferences for how AI agents may use your content. Compliance depends on each service."
+msgstr "この HTTP ヘッダーは、AI エージェントに対してコンテンツの利用に関する意思を表明します。準拠するかどうかは各サービスの実装に依存します。"
 
 #: includes/admin.php
 msgid "What each value means"
 msgstr "各項目の意味"
 
 #: includes/admin.php
-msgid "Request no AI training"
-msgstr "AI 学習への利用を望まないことを通知"
+msgid "Do not use for model training"
+msgstr "モデルの学習に使用しないよう要請"
 
 #: includes/admin.php
-msgid "Search indexing acceptable"
-msgstr "検索インデックスへの利用を許容"
+msgid "Allow use in search snippets"
+msgstr "検索スニペットへの利用を許容"
 
 #: includes/admin.php
-msgid "AI assistant reference acceptable"
-msgstr "AI アシスタントの参照を許容"
+msgid "Allow use in AI-generated answers"
+msgstr "AI 生成回答での利用を許容"
 
 #: includes/admin.php
 msgid "Controls how long browsers and CDNs may cache the Markdown response. Leave empty to let the server decide."
 msgstr "ブラウザや CDN が Markdown レスポンスをキャッシュする時間を制御します。空にするとサーバーの設定に従います。"
 
-#. translators: %s is the default value
+#. translators: %s is the initial value
 #: includes/admin.php
-msgid "Default: %s"
-msgstr "デフォルト: %s"
+msgid "Initial value: %s"
+msgstr "初期値: %s"
 
 #. translators: %s is the recommended value
 #: includes/admin.php
@@ -83,12 +83,16 @@ msgid "Recommended: %s"
 msgstr "推奨: %s"
 
 #: includes/admin.php
+msgid "Use initial value"
+msgstr "初期値を使用"
+
+#: includes/admin.php
 msgid "Use recommended"
 msgstr "推奨値を使用"
 
 #: includes/admin.php
-msgid "Allow CDN and proxy caches"
-msgstr "CDN やプロキシキャッシュを許可"
+msgid "Allow CDN and proxy caches (safe — Markdown responses contain only published content)"
+msgstr "CDN やプロキシキャッシュを許可（安全 — Markdown レスポンスは公開済みコンテンツのみ）"
 
 #: includes/admin.php
 msgid "Browser cache only (no CDN)"
