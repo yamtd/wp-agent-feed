@@ -3,7 +3,7 @@
  * Plugin Name: WP Agent Feed
  * Plugin URI: https://github.com/yamtd/wp-agent-feed
  * Description: Accept: text/markdown ヘッダー付きリクエストに対して、投稿コンテンツをMarkdownで返す。保存時に静的キャッシュを生成するパフォーマンス重視設計。
- * Version: 0.5.0
+ * Version: 0.6.0
  * Requires PHP: 7.4
  * Author: Yamada Tadaaki
  * Author URI: https://github.com/yamtd
@@ -560,6 +560,7 @@ function clear_all_cache() {
  * GitHub 自動更新（WP 5.8+）
  * ======================================== */
 add_filter( 'update_plugins_github.com', __NAMESPACE__ . '\check_github_update', 10, 4 );
+add_filter( 'plugins_api', __NAMESPACE__ . '\plugin_info', 10, 3 );
 
 /**
  * GitHub Releases から最新バージョンを確認し、更新情報を返す。
@@ -661,6 +662,91 @@ function check_github_update( $update, $plugin_data, $plugin_file, $locales ) {
 	);
 }
 
+/**
+ * プラグイン詳細モーダル用の情報を返す。
+ *
+ * 「バージョン X.X.X の詳細を見る」リンク押下時に plugins_api フィルター経由で呼ばれる。
+ *
+ * @param false|object|array $result The result object or array.
+ * @param string             $action The type of information being requested.
+ * @param object             $args   Plugin API arguments.
+ * @return false|object|array Plugin information or pass-through value.
+ */
+function plugin_info( $result, $action, $args ) {
+	if ( 'plugin_information' !== $action || ! is_object( $args ) || ! isset( $args->slug ) || 'wp-agent-feed' !== $args->slug ) {
+		return $result;
+	}
+
+	$cached = get_transient( 'wp_agent_feed_gh_info' );
+
+	if ( false !== $cached && is_object( $cached ) ) {
+		return $cached;
+	}
+
+	$headers = get_file_data(
+		__FILE__,
+		array(
+			'Version'     => 'Version',
+			'Description' => 'Description',
+			'RequiresPHP' => 'Requires PHP',
+			'Author'      => 'Author',
+			'AuthorURI'   => 'Author URI',
+			'PluginURI'   => 'Plugin URI',
+		)
+	);
+
+	$info               = new \stdClass();
+	$info->name         = 'WP Agent Feed';
+	$info->slug         = 'wp-agent-feed';
+	$info->author       = '<a href="' . esc_url( $headers['AuthorURI'] ) . '">' . esc_html( $headers['Author'] ) . '</a>';
+	$info->homepage     = $headers['PluginURI'];
+	$info->requires_php = $headers['RequiresPHP'];
+	$info->banners      = array();
+	$info->sections     = array(
+		'description' => esc_html( $headers['Description'] ),
+	);
+
+	// デフォルトは現在のバージョン（API 失敗時のフェイルセーフ）。
+	$info->version       = $headers['Version'];
+	$info->download_link = '';
+
+	$response = wp_remote_get(
+		'https://api.github.com/repos/yamtd/wp-agent-feed/releases/latest',
+		array(
+			'timeout' => 10,
+			'headers' => array(
+				'Accept'     => 'application/vnd.github.v3+json',
+				'User-Agent' => 'WordPress/wp-agent-feed',
+			),
+		)
+	);
+
+	if ( ! is_wp_error( $response ) && 200 === wp_remote_retrieve_response_code( $response ) ) {
+		$release = json_decode( wp_remote_retrieve_body( $response ), true );
+
+		if ( is_array( $release ) && ! empty( $release['tag_name'] ) ) {
+			$info->version = ltrim( $release['tag_name'], 'v' );
+
+			if ( ! empty( $release['assets'] ) && is_array( $release['assets'] ) ) {
+				foreach ( $release['assets'] as $asset ) {
+					if ( ! empty( $asset['browser_download_url'] ) && '.zip' === substr( $asset['browser_download_url'], -4 ) ) {
+						$info->download_link = $asset['browser_download_url'];
+						break;
+					}
+				}
+			}
+
+			if ( ! empty( $release['body'] ) ) {
+				$info->sections['changelog'] = wpautop( esc_html( $release['body'] ) );
+			}
+		}
+	}
+
+	set_transient( 'wp_agent_feed_gh_info', $info, 12 * HOUR_IN_SECONDS );
+
+	return $info;
+}
+
 /* ========================================
  * アンインストール処理
  * ======================================== */
@@ -709,4 +795,5 @@ function uninstall() {
 	delete_option( 'wp_agent_feed_post_types' );
 	delete_option( 'wp_agent_feed_cache_control' );
 	delete_transient( 'wp_agent_feed_gh_update' );
+	delete_transient( 'wp_agent_feed_gh_info' );
 }

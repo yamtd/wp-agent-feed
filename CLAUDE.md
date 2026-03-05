@@ -83,6 +83,7 @@ npx @wordpress/env stop
 | `get_cache_stats()` | `wp-agent-feed.php` | キャッシュファイル数カウント | No |
 | `validate_markdown_output()` | `wp-agent-feed.php` | Markdown 出力検証 | No |
 | `check_github_update()` | `wp-agent-feed.php` | GitHub 自動更新チェック | Yes |
+| `plugin_info()` | `wp-agent-feed.php` | プラグイン詳細モーダル情報提供 | Yes |
 | `uninstall()` | `wp-agent-feed.php` | プラグイン削除時クリーンアップ | Yes |
 | `html_to_markdown()` | `includes/markdown.php` | HTML → Markdown 変換 | No |
 | `convert_table()` | `includes/markdown.php` | HTML table → Markdown table | No |
