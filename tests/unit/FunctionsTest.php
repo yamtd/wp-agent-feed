@@ -15,7 +15,11 @@ use function WpAgentFeed\robots_disallow_path;
 use function WpAgentFeed\filter_robots_txt;
 use function WpAgentFeed\get_cache_stats;
 use function WpAgentFeed\validate_markdown_output;
+use function WpAgentFeed\accepts_markdown;
+use function WpAgentFeed\add_content_signal;
+use function WpAgentFeed\build_list_markdown;
 use const WpAgentFeed\CACHE_DIR;
+use const WpAgentFeed\CONTENT_SIGNAL;
 
 /**
  * Unit tests for pure functions in wp-agent-feed.php.
@@ -675,5 +679,143 @@ final class FunctionsTest extends TestCase {
 		$this->assertNotNull( $token_check );
 		$this->assertTrue( $token_check['pass'] );
 		$this->assertGreaterThan( 0, (int) $token_check['actual'] );
+	}
+
+	/* ========================================
+	 * accepts_markdown() テスト
+	 * ======================================== */
+
+	public static function accepts_markdown_provider(): array {
+		return [
+			'markdown only'         => [ 'text/markdown', true ],
+			'with html'             => [ 'text/html, text/markdown', true ],
+			'q above zero'          => [ 'text/markdown;q=0.5, text/html', true ],
+			'spaces and upper case' => [ 'text/html ,  Text/Markdown ; q=1', true ],
+			'q zero'                => [ 'text/markdown;q=0, text/html', false ],
+			'q zero with decimals'  => [ 'text/markdown; q=0.000', false ],
+			'html only'             => [ 'text/html,application/xhtml+xml,*/*;q=0.8', false ],
+			'similar subtype'       => [ 'text/markdown-extra', false ],
+			'empty'                 => [ '', false ],
+		];
+	}
+
+	#[Test]
+	#[DataProvider( 'accepts_markdown_provider' )]
+	public function accepts_markdown_cases( string $accept, bool $expected ): void {
+		$this->assertSame( $expected, accepts_markdown( $accept ) );
+	}
+
+	/* ========================================
+	 * add_content_signal() / filter_robots_txt() の Content-Signal テスト
+	 * ======================================== */
+
+	#[Test]
+	public function add_content_signal_inserts_after_wildcard_user_agent(): void {
+		$output = add_content_signal( "User-agent: *\nDisallow: /wp-admin/\n", 'ai-train=no, search=yes, ai-input=yes' );
+		$this->assertSame( "User-agent: *\nContent-Signal: ai-train=no, search=yes, ai-input=yes\nDisallow: /wp-admin/\n", $output );
+	}
+
+	#[Test]
+	public function add_content_signal_keeps_crlf(): void {
+		$output = add_content_signal( "User-agent: *\r\nDisallow: /wp-admin/\r\n", 'search=yes' );
+		$this->assertSame( "User-agent: *\r\nContent-Signal: search=yes\r\nDisallow: /wp-admin/\r\n", $output );
+	}
+
+	#[Test]
+	public function add_content_signal_when_user_agent_is_last_line(): void {
+		$this->assertSame( "User-agent: *\nContent-Signal: search=yes", add_content_signal( 'User-agent: *', 'search=yes' ) );
+	}
+
+	#[Test]
+	public function add_content_signal_only_first_wildcard_group(): void {
+		$output = add_content_signal( "User-agent: *\nDisallow: /a/\n\nUser-agent: *\nDisallow: /b/\n", 'search=yes' );
+		$this->assertSame( 1, substr_count( $output, 'Content-Signal:' ) );
+		$this->assertStringStartsWith( "User-agent: *\nContent-Signal: search=yes\n", $output );
+	}
+
+	#[Test]
+	public function add_content_signal_ignores_specific_user_agent(): void {
+		$input = "User-agent: Googlebot\nDisallow: /a/\n";
+		$this->assertSame( $input, add_content_signal( $input, 'search=yes' ) );
+	}
+
+	#[Test]
+	public function add_content_signal_skips_existing_line(): void {
+		$input = "User-agent: *\ncontent-signal: ai-train=yes\nDisallow: /a/\n";
+		$this->assertSame( $input, add_content_signal( $input, 'ai-train=no' ) );
+	}
+
+	#[Test]
+	public function add_content_signal_strips_newlines_from_value(): void {
+		$output = add_content_signal( "User-agent: *\n", "search=yes\nDisallow: /" );
+		$this->assertSame( "User-agent: *\nContent-Signal: search=yesDisallow: /\n", $output );
+	}
+
+	#[Test]
+	public function add_content_signal_skips_empty_value(): void {
+		$input = "User-agent: *\n";
+		$this->assertSame( $input, add_content_signal( $input, " \n" ) );
+	}
+
+	#[Test]
+	public function filter_robots_txt_adds_content_signal_when_public(): void {
+		$output = filter_robots_txt( "User-agent: *\nDisallow: /wp-admin/\n", '1' );
+		$this->assertStringStartsWith( "User-agent: *\nContent-Signal: " . CONTENT_SIGNAL . "\n", $output );
+	}
+
+	#[Test]
+	public function filter_robots_txt_skips_content_signal_when_not_public(): void {
+		$output = filter_robots_txt( "User-agent: *\nDisallow: /\n", '0' );
+		$this->assertStringNotContainsString( 'Content-Signal:', $output );
+	}
+
+	/* ========================================
+	 * build_list_markdown() テスト
+	 * ======================================== */
+
+	#[Test]
+	public function build_list_markdown_full(): void {
+		$output   = build_list_markdown(
+			'My "Site"',
+			"A site\nabout things",
+			'https://example.com/',
+			[
+				[
+					'title'       => 'First [draft]',
+					'url'         => 'https://example.com/first/',
+					'description' => "Line one\n line two",
+				],
+				[
+					'title'       => 'Second',
+					'url'         => 'https://example.com/second/',
+					'description' => '',
+				],
+			]
+		);
+		$expected = implode(
+			"\n",
+			[
+				'---',
+				'title: "My \"Site\""',
+				'description: "A site about things"',
+				'url: "https://example.com/"',
+				'---',
+				'',
+				'# My "Site"',
+				'',
+				'> A site about things',
+				'',
+				'- [First \[draft\]](https://example.com/first/): Line one line two',
+				'- [Second](https://example.com/second/)',
+				'',
+			]
+		);
+		$this->assertSame( $expected, $output );
+	}
+
+	#[Test]
+	public function build_list_markdown_without_description_or_items(): void {
+		$output = build_list_markdown( 'Site', '', 'https://example.com/', [] );
+		$this->assertSame( "---\ntitle: \"Site\"\ndescription: \"\"\nurl: \"https://example.com/\"\n---\n\n# Site\n\n", $output );
 	}
 }
