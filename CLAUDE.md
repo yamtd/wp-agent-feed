@@ -70,12 +70,16 @@ npx @wordpress/env stop
 
 | 関数 | ファイル | 役割 | WP依存 |
 |------|---------|------|--------|
-| `serve_markdown()` | `wp-agent-feed.php` | Accept ヘッダー確認 → キャッシュ配信 | Yes |
+| `serve_markdown()` | `wp-agent-feed.php` | Accept ヘッダー確認 → キャッシュ配信（投稿の一覧は都度組む） | Yes |
+| `send_markdown()` | `wp-agent-feed.php` | Markdown 応答のヘッダー送信と出力 | Yes |
+| `build_home_markdown()` | `wp-agent-feed.php` | 投稿の一覧（is_home）の Markdown をメインクエリから組む | Yes |
+| `accepts_markdown()` | `wp-agent-feed.php` | Accept が text/markdown を受け付けるか（q=0 は除く） | No |
+| `add_content_signal()` | `wp-agent-feed.php` | robots.txt の `User-agent: *` の直後に Content-Signal の行を入れる | No |
 | `on_save_post()` | `wp-agent-feed.php` | 保存時キャッシュ生成/削除 | Yes |
 | `generate_cache()` | `wp-agent-feed.php` | Markdown ファイル生成 | Yes |
 | `get_rendered_content()` | `wp-agent-feed.php` | the_content フィルター適用 | Yes |
 | `build_frontmatter()` | `wp-agent-feed.php` | YAML フロントマター生成 | Yes |
-| `get_description()` | `wp-agent-feed.php` | SEO メタ description 取得（フォールバック: 抜粋） | Yes |
+| `get_description()` | `wp-agent-feed.php` | SEO メタ description 取得（フォールバック: 抜粋。生成しない指定あり） | Yes |
 | `is_overridden()` | `wp-agent-feed.php` | wp-config.php オーバーライド検出 | No |
 | `cache_path()` | `wp-agent-feed.php` | キャッシュファイルパス生成 | No |
 | `delete_cache()` | `wp-agent-feed.php` | キャッシュファイル削除 | No |
@@ -88,6 +92,8 @@ npx @wordpress/env stop
 | `html_to_markdown()` | `includes/markdown.php` | HTML → Markdown 変換 | No |
 | `convert_table()` | `includes/markdown.php` | HTML table → Markdown table | No |
 | `escape_yaml()` | `includes/markdown.php` | YAML 文字列エスケープ | No |
+| `build_list_markdown()` | `includes/markdown.php` | 投稿の一覧の Markdown 組み立て | No |
+| `one_line()` | `includes/markdown.php` | 連続する空白を 1 つにして 1 行にする | No |
 | `estimate_tokens()` | `includes/markdown.php` | トークン数推定 | No |
 | `add_admin_menu()` | `includes/admin.php` | Settings メニューにページ追加 | Yes |
 | `register_settings()` | `includes/admin.php` | Settings API 登録 | Yes |

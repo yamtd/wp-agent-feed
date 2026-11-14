@@ -254,6 +254,58 @@ function escape_yaml( $str ) {
 }
 
 /**
+ * 投稿の一覧の Markdown（フロントマター、見出し、説明、リンクの箇条書き）を組む。
+ *
+ * @param string $title       一覧の題（サイト名）。
+ * @param string $description 一覧の説明。空なら説明の行を出さない。
+ * @param string $url         一覧の URL。
+ * @param array  $items       各要素は title・url・description の連想配列。
+ * @return string
+ */
+function build_list_markdown( $title, $description, $url, $items ) {
+	$title       = one_line( $title );
+	$description = one_line( $description );
+
+	$lines = [
+		'---',
+		'title: "' . escape_yaml( $title ) . '"',
+		'description: "' . escape_yaml( $description ) . '"',
+		'url: "' . escape_yaml( $url ) . '"',
+		'---',
+		'',
+		'# ' . $title,
+		'',
+	];
+
+	if ( '' !== $description ) {
+		$lines[] = '> ' . $description;
+		$lines[] = '';
+	}
+
+	foreach ( $items as $item ) {
+		$link_text = str_replace( [ '\\', '[', ']' ], [ '\\\\', '\\[', '\\]' ], one_line( $item['title'] ) );
+		$line      = '- [' . $link_text . '](' . $item['url'] . ')';
+		$item_desc = one_line( $item['description'] );
+		if ( '' !== $item_desc ) {
+			$line .= ': ' . $item_desc;
+		}
+		$lines[] = $line;
+	}
+
+	return implode( "\n", $lines ) . "\n";
+}
+
+/**
+ * 改行とタブを含む連続する空白を 1 つの空白にし、前後の空白を除く。
+ *
+ * @param string $str 文字列。
+ * @return string
+ */
+function one_line( $str ) {
+	return trim( (string) preg_replace( '/\s+/u', ' ', (string) $str ) );
+}
+
+/**
  * トークン数の推定（英語: ~4文字/token、日本語: ~1.5文字/token の加重平均）
  */
 function estimate_tokens( $text ) {

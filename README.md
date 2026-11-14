@@ -3,10 +3,15 @@
 AIエージェントが `Accept: text/markdown` ヘッダー付きでアクセスしてきた際に、
 投稿コンテンツをMarkdownで返すWordPressプラグイン。
 
+- 対象: 設定した投稿タイプの個別ページと、投稿の一覧のページ（トップが「最新の投稿」のときのトップ、または「投稿ページ」）
+- `Accept` に `text/markdown;q=0` とあるときは「受け付けない」として HTML を返す
+- サイトが検索エンジンに公開されているとき、`robots.txt` の `User-agent: *` の直後に `Content-Signal` の行を入れる（値はレスポンスヘッダーと同じ設定）
+
 ## パフォーマンス設計
 
 - **保存時にMarkdownを静的ファイルとして生成**（`wp-content/cache/markdown/`）
 - リクエスト時はファイルを読んで返すだけ（変換処理なし）
+- 投稿の一覧のページだけは、要求のたびにメインクエリの投稿（タイトル・URL・説明）から組む。説明は SEO プラグインのメタと手で書いた抜粋だけを使い、本文から抜粋を生成しない
 - 外部ライブラリ依存なし（実行時）
 
 ## セットアップ
@@ -124,6 +129,8 @@ IETF の [AIPREF ワーキンググループ](https://datatracker.ietf.org/doc/d
   対応プラグイン: SEO SIMPLE PACK / Yoast SEO / All in One SEO / SEOPress / Rank Math。
   未対応プラグインは `wp_agent_feed_description` フィルターでカスタマイズ可能。
   対応プラグインの一覧は今後変更される可能性がある。
+- 投稿の一覧のページのフロントマターの `description` は、サイトのキャッチフレーズ。
+  `wp_agent_feed_home_description` フィルターで差し替えられる。
 - HTML→Markdown変換はWordPressの `the_content` 出力（標準的なブロック要素）に最適化。
   カスタムショートコードや複雑なネストされたテーブルは完全に変換されない場合がある。
 - ネストされたリスト（`<ul>` / `<ol>` の入れ子）やネストされた `<blockquote>` は

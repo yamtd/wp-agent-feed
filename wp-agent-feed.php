@@ -3,7 +3,7 @@
  * Plugin Name: WP Agent Feed
  * Plugin URI: https://github.com/yamtd/wp-agent-feed
  * Description: Accept: text/markdown ヘッダー付きリクエストに対して、投稿コンテンツをMarkdownで返す。保存時に静的キャッシュを生成するパフォーマンス重視設計。
- * Version: 0.5.1
+ * Version: 0.6.0
  * Requires PHP: 7.4
  * Author: Yamada Tadaaki
  * Author URI: https://github.com/yamtd
@@ -69,9 +69,14 @@ add_filter( 'robots_txt', __NAMESPACE__ . '\filter_robots_txt', 10, 2 );
 add_action( 'wp', __NAMESPACE__ . '\serve_markdown', 1 );
 
 function serve_markdown() {
-	$accept = $_SERVER['HTTP_ACCEPT'] ?? '';
-	if ( strpos( $accept, 'text/markdown' ) === false ) {
+	if ( ! accepts_markdown( $_SERVER['HTTP_ACCEPT'] ?? '' ) ) {
 		return;
+	}
+
+	// 投稿の一覧（トップが「最新の投稿」のときのトップ、または投稿ページ）は、要求のたびに一覧を組んで返す。
+	// 投稿ページを指定したフィード（?page_id=<投稿ページ>&feed=rss2）は is_home() と is_feed() が両方 true になる。
+	if ( is_home() && ! is_feed() ) {
+		send_markdown( build_home_markdown() );
 	}
 
 	if ( ! is_singular( POST_TYPES ) ) {
@@ -95,6 +100,16 @@ function serve_markdown() {
 	if ( false === $markdown ) {
 		return;
 	}
+
+	send_markdown( $markdown );
+}
+
+/**
+ * Markdown を応答として送って終了する（レスポンスヘッダー契約は CLAUDE.md）。
+ *
+ * @param string $markdown 本文。
+ */
+function send_markdown( $markdown ) {
 	$token_count = estimate_tokens( $markdown );
 
 	status_header( 200 );
@@ -109,6 +124,41 @@ function serve_markdown() {
 
 	echo $markdown;
 	exit;
+}
+
+/**
+ * 投稿の一覧のページ（is_home()）の Markdown を、メインクエリの投稿から組む。
+ *
+ * 要求のたびに組むので、説明は SEO プラグインのメタと手で書いた抜粋だけを使い、
+ * 本文からの抜粋の生成（the_content フィルター）は走らせない。
+ *
+ * @return string
+ */
+function build_home_markdown() {
+	global $wp_query;
+
+	$items = array();
+	foreach ( $wp_query->posts as $post ) {
+		$post    = get_post( $post );
+		$items[] = array(
+			'title'       => $post->post_title,
+			'url'         => get_permalink( $post ),
+			'description' => post_password_required( $post ) ? '' : get_description( $post, false ),
+		);
+	}
+
+	$paged       = max( 1, (int) get_query_var( 'paged' ) );
+	$description = apply_filters(
+		'wp_agent_feed_home_description',
+		wp_specialchars_decode( get_bloginfo( 'description' ), ENT_QUOTES )
+	);
+
+	return build_list_markdown(
+		wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ),
+		(string) $description,
+		get_pagenum_link( $paged, false ),
+		$items
+	);
 }
 
 /* ========================================
@@ -276,10 +326,11 @@ function build_frontmatter( $post ) {
  * Supported: SEO SIMPLE PACK, Yoast SEO, All in One SEO, SEOPress, Rank Math.
  *
  * @since 0.5.0 Beta — supported plugin list may change.
- * @param WP_Post $post Post object.
+ * @param WP_Post $post             Post object.
+ * @param bool    $generate_excerpt false のときは、手で書いた抜粋が無くても本文から生成しない。
  * @return string
  */
-function get_description( $post ) {
+function get_description( $post, $generate_excerpt = true ) {
 	$meta_keys = array(
 		'ssp_meta_description',       // SEO SIMPLE PACK
 		'_yoast_wpseo_metadesc',      // Yoast SEO
@@ -298,7 +349,7 @@ function get_description( $post ) {
 	}
 
 	if ( empty( $description ) ) {
-		$description = get_the_excerpt( $post );
+		$description = $generate_excerpt ? get_the_excerpt( $post ) : trim( $post->post_excerpt );
 	}
 
 	return apply_filters( 'wp_agent_feed_description', $description, $post );
@@ -347,13 +398,67 @@ function robots_disallow_path( $abspath, $cache_dir ) {
 }
 
 /**
- * robots.txt に Disallow ルールを追加するフィルターコールバック。
+ * Accept ヘッダーが text/markdown を受け付けるか。
+ *
+ * q=0 は「受け付けない」の意味（RFC 9110 12.4.2）なので除く。text/html の q との大小は比べない。
+ *
+ * @param string $accept Accept ヘッダーの値。
+ * @return bool
+ */
+function accepts_markdown( $accept ) {
+	foreach ( explode( ',', strtolower( (string) $accept ) ) as $range ) {
+		$params = array_map( 'trim', explode( ';', $range ) );
+		if ( 'text/markdown' !== array_shift( $params ) ) {
+			continue;
+		}
+		foreach ( $params as $param ) {
+			if ( 0 === strpos( $param, 'q=' ) ) {
+				return (float) substr( $param, 2 ) > 0;
+			}
+		}
+		return true;
+	}
+	return false;
+}
+
+/**
+ * robots.txt の最初の `User-agent: *` の行の直後に `Content-Signal` の行を入れる。
+ *
+ * 既に `Content-Signal` の行があるとき、`User-agent: *` の行が無いとき、値が空のときは何もしない。
+ *
+ * @param string $output robots.txt の出力文字列。
+ * @param string $signal Content-Signal の値。
+ * @return string
+ */
+function add_content_signal( $output, $signal ) {
+	$signal = trim( str_replace( array( "\r", "\n" ), '', (string) $signal ) );
+	if ( '' === $signal || preg_match( '/^[ \t]*content-signal[ \t]*:/im', $output ) ) {
+		return $output;
+	}
+
+	return preg_replace_callback(
+		'/^([ \t]*user-agent[ \t]*:[ \t]*\*[ \t]*)(\r?\n|$)/im',
+		function ( $m ) use ( $signal ) {
+			$eol = '' === $m[2] ? "\n" : $m[2];
+			return $m[1] . $eol . 'Content-Signal: ' . $signal . $m[2];
+		},
+		$output,
+		1
+	);
+}
+
+/**
+ * robots.txt に Content-Signal の行と Disallow ルールを追加するフィルターコールバック。
  *
  * @param string $output robots.txt の出力文字列。
  * @param int    $public サイトの公開設定。
  * @return string フィルター済み出力。
  */
 function filter_robots_txt( $output, $public ) {
+	if ( (int) $public ) {
+		$output = add_content_signal( $output, CONTENT_SIGNAL );
+	}
+
 	$path = robots_disallow_path( ABSPATH, CACHE_DIR );
 	if ( '' === $path ) {
 		return $output;
