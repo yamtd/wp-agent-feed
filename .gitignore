@@ -6,3 +6,4 @@
 .wp-env/
 .wp-env.override.json
 .claude/
+.tmp/

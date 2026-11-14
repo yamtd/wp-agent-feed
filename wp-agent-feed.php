@@ -74,7 +74,8 @@ function serve_markdown() {
 	}
 
 	// 投稿の一覧（トップが「最新の投稿」のときのトップ、または投稿ページ）は、要求のたびに一覧を組んで返す。
-	if ( is_home() ) {
+	// 投稿ページを指定したフィード（?page_id=<投稿ページ>&feed=rss2）は is_home() と is_feed() が両方 true になる。
+	if ( is_home() && ! is_feed() ) {
 		send_markdown( build_home_markdown() );
 	}
 
